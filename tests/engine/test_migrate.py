@@ -149,8 +149,27 @@ def test_cli_flow(cli, project, mig_dir, monkeypatch):
     assert read_events(project.root) == []
     code, env, _ = cli("migrate", "--yes", "--json", "--root", root)
     assert code == 0 and env["data"]["status"] == "applied"
-    (event,) = read_events(project.root)
+    (event,) = [e for e in read_events(project.root) if not e['command'].startswith('lease ')]
     assert event["command"] == "migrate" and "project.yaml" in event["targets"]
     code, env, _ = cli("migrate", "--yes", "--json", "--root", root)
     assert code == 0 and env["data"]["status"] == "up-to-date"
-    assert len(read_events(project.root)) == 1  # the no-op is not logged
+    assert len([e for e in read_events(project.root) if not e['command'].startswith('lease ')]) == 1  # no-op not logged
+
+
+def test_migrate_takes_and_releases_the_config_lease(cli, project, mig_dir, monkeypatch):
+    """004/R1: migrations run under the config lease; a foreign holder blocks them before anything changes."""
+    from metarepo_engine import leases
+
+    monkeypatch.setattr(dispatch, "__version__", "0.2.0")
+    monkeypatch.setattr(migrate_mod, "migrations_dir", lambda: mig_dir)
+    root = str(project.root)
+    other = leases.acquire(project.root, "config", "member-b", "edit", session="other", host="h",
+                           gov={"lease_settle_seconds": 0, "lease_ttl_minutes": 30})
+    before = tree_snapshot(project.root)
+    code, env, _ = cli("migrate", "--yes", "--json", "--root", root)
+    assert code == 3 and env["errors"][0]["code"] == "lease_held"
+    assert tree_snapshot(project.root) == before
+    leases.release(project.root, other.lease)
+    code, env, _ = cli("migrate", "--yes", "--json", "--root", root)
+    assert code == 0 and env["data"]["status"] == "applied"
+    assert leases.status(project.root, "config")["state"] == "released"

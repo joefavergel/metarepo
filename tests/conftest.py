@@ -19,6 +19,7 @@ def _isolated_cache(tmp_path_factory, monkeypatch):
     """Never touch the real per-member cache or identity."""
     monkeypatch.setenv("METAREPO_CACHE_DIR", str(tmp_path_factory.mktemp("cache")))
     monkeypatch.setenv("METAREPO_ACTOR", "test-actor")
+    monkeypatch.setenv("METAREPO_SETTLE_SECONDS", "0")  # 004: no settle wait in tests
     monkeypatch.delenv("METAREPO_ENGINE", raising=False)
 
 

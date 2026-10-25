@@ -12,7 +12,17 @@ import re
 from pathlib import Path
 from typing import Iterable, Mapping
 
-from .fsops import atomic_write_text, fs_path, local_cache_dir, sha256_file  # noqa: F401  (re-exported)
+from . import fsops
+from .fsops import atomic_write_text, fs_path, local_cache_dir
+from .readable import ensure_local
+
+
+
+def sha256_file(path: Path, chunk: int = 1024 * 1024) -> str:
+    """SHA-256 of a local file. Streamed placeholders are refused with ``not_local`` (004/R12)."""
+    ensure_local(path)
+    return fsops.sha256_file(path, chunk)
+
 
 SOURCE_ID_RE = re.compile(r"^src-[0-9a-f]{12,64}$")
 ID_LENGTHS = (12, 16, 20, 24, 28, 32, 40, 48, 56, 64)
@@ -61,6 +71,7 @@ class HashCache:
 
     def sha256(self, path: Path) -> str:
         path = Path(path)
+        ensure_local(path)
         st = os.stat(fs_path(path))
         key = str(path.resolve())
         entry = self._data.get(key)

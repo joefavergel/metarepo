@@ -32,6 +32,18 @@ Numbered folders are stages of the information lifecycle (`00_inbox`, then `10_s
 - Do **not** put secrets, passwords, keys or dependency folders here (`/doctor` reports them).
 - Code lives in git, **outside** this folder. See `code/README.md` if the project has repositories.
 
+## Sync settings (per-folder availability)
+
+This folder lives on a cloud drive. Streamed ("online-only") files look present but are not on your disk,
+and the toolkit refuses to hash or extract them (`not-local`). In your sync client, set:
+
+- **Available offline** (keep a local copy): `30_wiki/`, `20_extracts/`, `_system/` and the files in the root.
+- **Online-only is fine** (downloaded when you ask for them): `10_sources/` and `shared/`.
+
+Menu names differ per client and operating system; the metarepo toolkit's `sync-providers.yaml` template
+lists the current wording per provider. If two people change one file at once, the drive keeps both as a
+"conflicted copy": do not delete either, run `/doctor`.
+
 ## Joining
 
 Each member installs the metarepo toolkit once (the Claude plugin, or the portable bundle for other agent

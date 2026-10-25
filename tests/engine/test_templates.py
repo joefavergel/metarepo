@@ -249,10 +249,10 @@ def test_render_templates_updates_after_config_change_and_keeps_notes(cli, tmp_p
     code, env, _ = cli("render-templates", "--json", "--root", str(root))
     text = agents.read_text(encoding="utf-8")
     assert "New objective." in text and "my notes" in text
-    (event,) = read_events(root)
+    (event,) = [e for e in read_events(root) if not e['command'].startswith('lease ')]
     assert event["command"] == "render-templates" and "AGENTS.md" in event["targets"]
     code, env, _ = cli("render-templates", "--json", "--root", str(root))
-    assert env["data"]["changed"] == [] and len(read_events(root)) == 1
+    assert env["data"]["changed"] == [] and len([e for e in read_events(root) if not e["command"].startswith("lease ")]) == 1
 
 
 def test_render_templates_warns_about_claude_md_and_refuses_invalid_config(cli, tmp_path):
