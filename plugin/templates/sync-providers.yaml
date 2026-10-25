@@ -26,6 +26,8 @@ heuristic:
     - '\s*\[conflict[^\]]*\]$'
 
 providers:
+  # `detect`: lower-case fragments of a folder path that identify the provider's sync root (005/R2). A heuristic
+  # used by `init` and `/join-metarepo`; the owner confirms when nothing matches.
   common:
     verified: partial
     notes: Names containing "conflicted copy" are produced by several clients.
@@ -35,6 +37,7 @@ providers:
         requires: []
 
   dropbox:
+    detect: ["dropbox"]
     verified: partial
     notes: >
       Dropbox help says the editor's name, "conflicted copy" and the save date are added to the file name,
@@ -49,6 +52,7 @@ providers:
         requires: []
 
   onedrive:
+    detect: ["onedrive"]
     verified: partial
     notes: >
       University IT guidance reports "<stem>-<ComputerName>.ext" for the copy made on the device that lost the
@@ -62,6 +66,7 @@ providers:
         requires: [original]
 
   google-drive:
+    detect: ["google drive", "googledrive", "my drive", "shared drives", "mi unidad", "meine ablage"]
     verified: unverified
     notes: >
       Google's help pages say Drive for desktop keeps both versions when streaming/mirroring content differs

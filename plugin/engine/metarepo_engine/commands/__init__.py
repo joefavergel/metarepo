@@ -12,6 +12,7 @@ from ..command import Command
 
 MODULES: tuple[str, ...] = (
     "config_get",
+    "config_user",
     "config_validate",
     "doctor",
     "extract",

@@ -21,6 +21,7 @@ from ..config import CONTRACT_FOLDERS, load_schema, validate_project
 from ..events import append_event, now_iso, resolve_actor
 from ..jsonout import EXIT_COMPAT, EXIT_PRECONDITION, EXIT_USAGE, EngineError, Result
 from ..naming import slugify
+from ..syncinfo import detect_provider
 from ..root import find_root
 from ..validate import validate
 
@@ -32,22 +33,12 @@ PROVIDER_METADATA = frozenset({
 # Names a partially scaffolded folder may contain (R6).
 SCAFFOLD_NAMES = frozenset(CONTRACT_FOLDERS) | {"project.yaml", "AGENTS.md", "README.md"}
 
-# Path fragments that identify a sync root (R2). Heuristic only: the owner confirms when nothing matches.
-SYNC_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("google-drive", ("google drive", "googledrive", "my drive", "shared drives", "mi unidad", "meine ablage")),
-    ("onedrive", ("onedrive",)),
-    ("dropbox", ("dropbox",)),
-)
-
 ANSWER_KEYS = frozenset(load_schema("answers")["properties"])
 
 
 def detect_sync_provider(path: Path) -> str | None:
-    haystack = [part.lower() for part in Path(path).resolve().parts]
-    for provider, hints in SYNC_HINTS:
-        if any(h in part for part in haystack for h in hints):
-            return provider
-    return None
+    """Heuristic from the path; the fragments live in templates/sync-providers.yaml (shared with 006)."""
+    return detect_provider(path)
 
 
 def inside_git_worktree(path: Path) -> Path | None:
