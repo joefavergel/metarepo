@@ -2,7 +2,7 @@
 
 The authoritative record of a source is the frontmatter of its extraction (008 section 2). The registry is
 computed from those files, never edited by hand, and may be cached in the local cache. Wiki-side fields
-(``wiki_status``) arrive with spec 010 through ``EXTRA_COLUMNS``.
+(``wiki_status``, spec 010) are registered through ``EXTRA_COLUMNS``.
 """
 from __future__ import annotations
 
@@ -23,8 +23,18 @@ _PART_RE = re.compile(r"\.part-\d{3}\.md$")
 COLUMNS = ("id", "path", "sha256", "size", "media_type", "original_name", "title", "language", "quality",
            "triage", "parent_id", "extractor", "extracted_at", "extract")
 
-# 010 registers computed columns here: name -> function(project root, row) -> value.
+# Computed columns: name -> function(project root, row) -> value.
 EXTRA_COLUMNS: dict[str, Callable[[Path, dict[str, Any]], Any]] = {}
+
+
+def _wiki_status(root: Path, row: dict[str, Any]) -> Any:
+    """pending / ingested / stale / None (010/R3); see ``wiki.sourcepage``."""
+    from .wiki import sourcepage
+
+    return sourcepage.wiki_status(root, row)
+
+
+EXTRA_COLUMNS["wiki_status"] = _wiki_status
 
 
 @dataclass
@@ -109,8 +119,7 @@ def parse_filters(specs: Iterable[str]) -> dict[str, set[str]]:
         if not sep or not key or not values.strip():
             raise FilterError(f"bad filter {spec!r}: expected key=value[,value]")
         if key not in allowed:
-            hint = " (wiki_status arrives with spec 010)" if key == "wiki_status" else ""
-            raise FilterError(f"unknown filter key {key!r}{hint}; available: {', '.join(sorted(allowed))}")
+            raise FilterError(f"unknown filter key {key!r}; available: {', '.join(sorted(allowed))}")
         out.setdefault(key, set()).update(v.strip() for v in values.split(",") if v.strip())
     return out
 
