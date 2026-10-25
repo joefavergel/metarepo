@@ -285,7 +285,7 @@ def test_ac2_zip_with_junk_duplicate_code_folder_and_nested_zip(cli, root, stagi
     assert "docs/inner/deeper.zip" in paths and paths["docs/inner/deeper.zip"]["bundle"] and not paths["docs/inner/deeper.zip"]["expanded"]
     assert "unexpanded" in paths["docs/inner/deeper.zip"]["reason"]
     assert m["code_folders"] == [{"path": "app", "markers": [".git", "package.json"]}]
-    assert (staging / "manifest.json").is_file()
+    assert (Path(m["staging"]) / "manifest.json").is_file() and Path(m["staging"]).parent == staging.resolve()
     assert m["container"]["id"].startswith("src-") and m["group"] == "pack"
     assert (root / "00_inbox" / "pack.zip").exists()          # unbundle never touches the inbox
 
@@ -294,7 +294,7 @@ def test_unbundle_refusal_leaves_no_files_and_dry_run_writes_nothing(cli, root, 
     zipped(root / "00_inbox" / "evil.zip", {"../x.txt": "x"})
     code, env, _ = run(cli, root, "unbundle", "00_inbox/evil.zip", "--staging", str(staging))
     assert code == 3 and env["errors"][0]["code"] == "bundle_path_traversal"
-    assert not list(staging.rglob("*.txt")) and not (staging / "manifest.json").exists()
+    assert not list(staging.rglob("*.txt")) and not list(staging.rglob("manifest.json"))
     zipped(root / "00_inbox" / "ok.zip", {"a.txt": "a"})
     code, env, _ = run(cli, root, "unbundle", "00_inbox/ok.zip", "--staging", str(staging), "--dry-run")
     assert code == 0 and env["data"]["dry_run"] and not list(staging.rglob("*"))
@@ -590,15 +590,74 @@ def test_headless_proposal_and_completed_event(cli, root, tmp_path):
 
 # ----------------------------------------------------------------------------- AC6 lease contention
 def test_ac6_second_member_is_told_who_holds_the_intake_lease(cli, root):
-    acquire(cli, root, "member-a")
+    first = acquire(cli, root, "member-a")
     code, env, _ = run(cli, root, "lease", "acquire", "intake", "--session", "s-b", actor="member-b")
     err = env["errors"][0]
-    assert code == 3 and err["code"] == "lease_held" and "member-a" in err["message"] and "until" in err["message"] or "expire" in err["message"].lower() or "member-a" in err["message"]
-    # the second member also cannot write with its own bogus nonce
+    held = json.loads((root / "_system/locks/intake.lease.json").read_text())
+    assert code == 3 and err["code"] == "lease_held"
+    assert "member-a" in err["message"]                      # who
+    assert held["expires_at"] in err["message"]              # until when
+    assert first not in json.dumps(env)                      # the nonce is never disclosed
+    # the second member cannot write with a nonce that is not the holder's
     inbox(root, "a.txt", DOC)
     code, env, _ = run(cli, root, "place", "00_inbox/a.txt", "--category", "c", "--triage", '{"decision":"wiki"}',
                        "--lease", "not-mine", actor="member-b")
-    assert code == 3 and (root / "00_inbox/a.txt").exists()
+    assert code == 3 and env["errors"][0]["code"] == "lease_lost" and (root / "00_inbox/a.txt").exists()
+
+
+def test_two_bundles_share_one_staging_directory(cli, root, staging):
+    zipped(root / "00_inbox" / "first.zip", {"a.txt": "from first", "docs/b.txt": "first b"})
+    zipped(root / "00_inbox" / "second.zip", {"a.txt": "from second", "../escape.txt": "x"})
+    zipped(root / "00_inbox" / "third.zip", {"a.txt": "from third"})
+    code, env, _ = run(cli, root, "unbundle", "00_inbox/first.zip", "--staging", str(staging))
+    assert code == 0, env
+    first = env["data"]
+    code, env, _ = run(cli, root, "unbundle", "00_inbox/second.zip", "--staging", str(staging))
+    assert code == 3 and env["errors"][0]["code"] == "bundle_path_traversal"
+    code, env, _ = run(cli, root, "unbundle", "00_inbox/third.zip", "--staging", str(staging))
+    assert code == 0, env
+    third = env["data"]
+    assert first["staging"] != third["staging"]
+    assert Path(first["members"][0]["staged"]).read_text() == "from first"       # not clobbered
+    assert {Path(r["staged"]).read_text() for r in first["members"]} == {"from first", "first b"}
+    assert json.loads((Path(first["staging"]) / "manifest.json").read_text())["container"]["name"] == "first.zip"
+    assert Path(third["members"][0]["staged"]).read_text() == "from third"
+    assert len([p for p in staging.iterdir() if p.is_dir()]) == 2                  # refused bundle left nothing
+
+
+def test_place_refuses_cloud_native_and_not_local_files(cli, root, monkeypatch):
+    from metarepo_engine import readable
+    from metarepo_engine.readable import NOT_LOCAL, Readability
+
+    nonce = acquire(cli, root)
+    inbox(root, "pointer.gdoc", b'{"doc_id": "abc"}')
+    code, env, _ = place(cli, root, nonce, "00_inbox/pointer.gdoc", "--category", "c")
+    assert code == 3 and env["errors"][0]["code"] == "cloud_native" and "export" in env["errors"][0]["message"]
+    assert (root / "00_inbox/pointer.gdoc").exists() and not list((root / "10_sources").rglob("*.gdoc"))
+    inbox(root, "stub.pdf", PDF)
+    monkeypatch.setattr(readable, "classify", lambda p: Readability(NOT_LOCAL, "dataless"))
+    code, env, _ = place(cli, root, nonce, "00_inbox/stub.pdf", "--category", "c")
+    assert code == 3 and env["errors"][0]["code"] == "not_local" and (root / "00_inbox/stub.pdf").exists()
+    zipped(root / "00_inbox" / "pack.zip", {"a.txt": "a"})
+    code, env, _ = run(cli, root, "unbundle", "00_inbox/pack.zip", "--staging", str(root.parent / "stg"))
+    assert code == 3 and env["errors"][0]["code"] == "not_local"
+
+
+def test_r10_long_name_gets_a_proposed_shorter_name(cli, root):
+    nonce = acquire(cli, root)
+    inbox(root, "x.txt", DOC)
+    category = "/".join(["c" * 50] * 3)               # 152 characters of folders: a shorter name still fits
+    code, env, _ = place(cli, root, nonce, "00_inbox/x.txt", "--category", category, "--name", "n" * 80 + ".txt")
+    err = env["errors"][0]
+    assert code == 3 and err["code"] == "path_too_long" and "--name " in err["message"]
+    proposed = err["message"].split("--name ")[1].rstrip(".")
+    assert proposed.endswith(".txt") and len(proposed) < 80 + 4
+    code, env, _ = place(cli, root, nonce, "00_inbox/x.txt", "--category", category, "--name", proposed)
+    assert code == 0, env
+    assert len(env["data"]["extract"]) <= 200
+    inbox(root, "y.txt", "other")
+    code, env, _ = place(cli, root, nonce, "00_inbox/y.txt", "--category", "/".join(["d" * 70] * 3))
+    assert code == 3 and "shorter category" in env["errors"][0]["message"]
 
 
 def test_end_to_end_headless_flow_leaves_inbox_empty(cli, root, staging):

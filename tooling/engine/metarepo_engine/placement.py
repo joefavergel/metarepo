@@ -23,8 +23,8 @@ from .events import append_event, now_iso
 from .extract import writer
 from .extract.base import normalize_body
 from .extract.pipeline import run_extract
-from .fsops import atomic_write_text, remove_file, safe_move, sha256_file
-from .hashing import source_id
+from .fsops import atomic_write_text, remove_file, safe_move
+from .hashing import sha256_file, source_id
 from .jsonout import EXIT_COMPAT, EXIT_PRECONDITION, EXIT_USAGE, EngineError
 from .mediatype import detect
 from .naming import check_relpath, hash6, nfc, slugify, slugify_filename, MAX_STEM
@@ -131,14 +131,30 @@ def plan_path(category: str, bundle_slug: str | None, member_path: str | None, o
     return "/".join([SOURCES, *dirs, filename]), flattened
 
 
+def propose_name(rel_source: str, limit: int) -> str | None:
+    """A shorter placed file name (for ``--name``) that makes the extraction path fit ``limit``, or None."""
+    folder, _, filename = writer.extract_rel(rel_source).rpartition("/")
+    filename = filename[:-3]  # the ".md" added by the extraction layout
+    stem, dot, ext = filename.rpartition(".")
+    if not dot:
+        stem, ext = filename, ""
+    suffix = f"-{hash6(rel_source)}"
+    room = limit - len(folder) - 1 - 3 - len(suffix) - (len(ext) + 1 if ext else 0)
+    if room < 1:
+        return None
+    short = stem[:room].rstrip("-")
+    return f"{short}{suffix}" + (f".{ext}" if ext else "")
+
+
 def _check_length(rel_source: str, limit: int) -> None:
     extract_rel = writer.extract_rel(rel_source)
     check = check_relpath(extract_rel, limit)
     if not check.ok:
-        hint = f" Proposed shorter extraction path: {check.proposal}" if check.proposal else ""
+        name = propose_name(rel_source, limit)
+        hint = (f" Proposed: pass --name {name}." if name else
+                " The folders alone are too long: choose a shorter category or bundle name.")
         raise EngineError("path_too_long" if check.length > limit else "path_invalid",
-                          f"{rel_source}: {'; '.join(check.problems)} (002/R10).{hint} Pass a shorter --name "
-                          "or category.", EXIT_PRECONDITION, rel_source)
+                          f"{rel_source}: {'; '.join(check.problems)} (002/R10).{hint}", EXIT_PRECONDITION, rel_source)
 
 
 # ----------------------------------------------------------------------------- place

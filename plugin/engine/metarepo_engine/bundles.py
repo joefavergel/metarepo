@@ -25,11 +25,11 @@ from pathlib import Path
 from typing import BinaryIO, Callable, Iterable
 
 from .config import compile_forbidden, effective_forbidden_paths, is_forbidden
-from .fsops import fs_path, nfc, sha256_file
-from .hashing import source_id
+from .fsops import fs_path, nfc
+from .hashing import sha256_file, source_id
 from .jsonout import EXIT_PRECONDITION, EngineError
 from .mediatype import detect
-from .naming import is_reserved, slugify
+from .naming import hash6, is_reserved, slugify
 
 JUNK_NAMES = frozenset({".ds_store", "thumbs.db", "desktop.ini"})
 JUNK_DIRS = frozenset({"__macosx"})
@@ -398,15 +398,20 @@ def validate_and_expand(source: Path, staging: Path, limits: Limits, *, known: d
     ``dry_run`` validates only: nothing is written.
     """
     source = Path(source)
-    st = _State(limits, Path(staging), known or {}, dry_run)
     is_folder = source.is_dir()
     kind = "folder" if is_folder else archive_kind(source)
     if kind is None:
         raise BundleError("bundle_unsupported", f"{source.name} is not a supported container (ZIP, TAR, TAR.GZ, "
                           "7z/RAR with a tool, or a folder)")
-    if not dry_run:
-        st.files.mkdir(parents=True, exist_ok=True)
     slug = slugify(archive_stem(source.name))
+    digest = None if is_folder else sha256_file(source)  # refuses not-local placeholders (004/R12)
+    # One sub-directory per container: several bundles share one staging directory per run.
+    sub = Path(staging) / f"{slug}-{(digest or hash6(str(source.resolve())))[:6]}"
+    st = _State(limits, sub, known or {}, dry_run)
+    if not dry_run:
+        if sub.exists():
+            shutil.rmtree(sub)  # a rerun of the same container replaces its own staging only
+        st.files.mkdir(parents=True, exist_ok=True)
     try:
         if is_folder:
             _process(_folder_entries(source), "", None, st, 1, source.name)
@@ -414,7 +419,7 @@ def validate_and_expand(source: Path, staging: Path, limits: Limits, *, known: d
             _expand_file(source, "", st, 1, kind)
     except BaseException:
         if not dry_run:
-            shutil.rmtree(st.files, ignore_errors=True)
+            shutil.rmtree(st.staging, ignore_errors=True)
         for tmp in st.temp_dirs:
             shutil.rmtree(tmp, ignore_errors=True)
         raise
@@ -432,13 +437,13 @@ def validate_and_expand(source: Path, staging: Path, limits: Limits, *, known: d
     top = sorted({Path(m["member_path"]).parts[0] for m in st.members if len(Path(m["member_path"]).parts) > 1})
     manifest = {
         "container": {"name": source.name, "kind": kind, "slug": slug,
-                      "sha256": None if is_folder else sha256_file(source),
-                      "id": None if is_folder else source_id(sha256_file(source), known or {}),
+                      "sha256": digest,
+                      "id": None if is_folder else source_id(digest, known or {}),
                       "size": None if is_folder else source.stat().st_size},
         "group": slug, "category_hint": slug, "top_folders": top,
         "files_root": str(st.files), "members": st.members, "nested_archives": st.nested, "junk": sorted(st.junk),
         "excluded": st.excluded, "code_folders": code_folders, "uncompressed_bytes": st.declared,
         "limits": {"max_bytes": limits.max_bytes, "max_ratio": limits.max_ratio, "max_depth": limits.max_depth},
-        "dry_run": dry_run,
+        "dry_run": dry_run, "staging": str(st.staging),
     }
     return manifest

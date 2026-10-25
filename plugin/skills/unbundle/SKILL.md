@@ -17,7 +17,8 @@ Engine resolution rules: see `references/engine.md`. Always pass `--json`.
 ```
 
 `<staging>` is the local temp directory chosen by `intake`, outside the metarepo. The engine validates
-**before writing anything**, then expands into `<staging>/files/` and saves `<staging>/manifest.json`.
+**before writing anything**, then expands into its own sub-directory `<staging>/<container-slug>-<hash6>/files/` (`data.staging`) and saves
+`manifest.json` there, so many bundles can share one `<staging>` in a run without overwriting each other.
 Use `--dry-run` to validate only.
 
 A violation stops that bundle (exit 3). Report the code and the engine's message, leave the container in the

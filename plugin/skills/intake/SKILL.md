@@ -203,3 +203,9 @@ agree the new decision and a reason with the operator, then:
 It only updates the extraction frontmatter; the original never moves. A source cannot be re-triaged to
 `reject`, and the policy gate blocks `wiki` for matched material. Release the lease, then apply step 10 for a
 change to `wiki`.
+
+## Not decided by the spec
+
+* Email containers (`.eml`, `.msg`) are not unpacked; they are triaged as ordinary files.
+* Deferred items are not resurfaced automatically; list them with `registry --filter triage=defer` when the
+  operator asks, and use `--retriage` to decide.

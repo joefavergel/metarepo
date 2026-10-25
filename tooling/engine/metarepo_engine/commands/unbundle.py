@@ -1,7 +1,8 @@
 """``unbundle <container> [--staging <dir>] [--provisional]``: validate, then expand a container (007/R5, R5a).
 
 The container is an archive file or a folder from ``00_inbox/``. Validation runs before any write; the
-expansion goes to a local staging directory outside the tree and a ``manifest.json`` is saved there. With
+expansion goes to ``<staging>/<container-slug>-<hash6>/files`` (one sub-directory per container, so several
+bundles can share a staging directory) outside the tree, with ``manifest.json`` beside it. With
 ``--dry-run`` the container is validated and nothing is written. Violations exit 3 with a rule code.
 """
 from __future__ import annotations
@@ -60,16 +61,16 @@ def run(ctx: Context, args: argparse.Namespace) -> Result:
         if row.get("sha256") in by_hash:
             row["duplicate_of"] = by_hash[row["sha256"]]["id"]
         if args.provisional and row.get("staged") and not row.get("bundle") and not row.get("duplicate_of"):
-            row["provisional"] = provisional_extract(project, Path(row["staged"]), staging / "provisional",
-                                                     row["id"][:16])
+            row["provisional"] = provisional_extract(project, Path(row["staged"]),
+                                                     Path(manifest["staging"]) / "provisional", row["id"][:16])
     if len(manifest["excluded"]) > 200:
         manifest["excluded_total"] = len(manifest["excluded"])
         manifest["excluded"] = manifest["excluded"][:200]
-    manifest["staging"] = str(staging)
+    manifest["staging_root"] = str(staging)
     if not ctx.dry_run:
-        atomic_write_text(staging / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+        atomic_write_text(Path(manifest["staging"]) / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     result = Result(data=manifest)
-    result.text = f"{len(manifest['members'])} member(s), {len(manifest['junk'])} junk, staging {staging}"
+    result.text = f"{len(manifest['members'])} member(s), {len(manifest['junk'])} junk, staging {manifest['staging']}"
     return result
 
 
