@@ -19,7 +19,8 @@
         "parent_id": null,
         "extractor": "plain",
         "extracted_at": "2026-10-24T15:00:00Z",
-        "extract": "20_extracts/papers/alpha.pdf.md"
+        "extract": "20_extracts/papers/alpha.pdf.md",
+        "wiki_status": "pending"
       },
       {
         "id": "src-8d15483c5450",
@@ -35,7 +36,8 @@
         "parent_id": "src-abcdefabcdef",
         "extractor": "plain",
         "extracted_at": "2026-10-24T15:00:00Z",
-        "extract": "20_extracts/data/gamma.csv.md"
+        "extract": "20_extracts/data/gamma.csv.md",
+        "wiki_status": null
       },
       {
         "id": "src-b5369b79c79a",
@@ -51,7 +53,8 @@
         "parent_id": null,
         "extractor": "plain",
         "extracted_at": "2026-10-24T15:00:00Z",
-        "extract": "20_extracts/papers/beta.md.md"
+        "extract": "20_extracts/papers/beta.md.md",
+        "wiki_status": null
       }
     ],
     "duplicates": [],

@@ -52,7 +52,7 @@ def test_filters(project, cli):
 
 
 @pytest.mark.parametrize("bad,needle", [("nokey", "expected key=value"), ("nope=1", "unknown filter key"),
-                                        ("wiki_status=pending", "spec 010"), ("triage=", "expected key=value")])
+                                        ("triage=", "expected key=value")])
 def test_bad_filters(project, cli, bad, needle):
     code, env, _ = cli("registry", "--filter", bad, "--json", "--root", str(project))
     assert code == 2 and env["errors"][0]["code"] == "bad_filter" and needle in env["errors"][0]["message"]
@@ -67,7 +67,7 @@ def test_extra_columns_hook_for_later_specs(project, monkeypatch, cli):
 def test_csv_format(project, cli):
     code, out, _ = cli("registry", "--format", "csv", "--root", str(project))
     rows = list(csv.DictReader(io.StringIO(out)))
-    assert code == 0 and len(rows) == 3 and set(rows[0]) == set(reg.COLUMNS)
+    assert code == 0 and len(rows) == 3 and set(rows[0]) == set(reg.COLUMNS) | {"wiki_status"}
     code, env, _ = cli("registry", "--format", "csv", "--json", "--root", str(project))
     assert env["data"]["csv"].startswith("id,path,sha256")
 
