@@ -15,7 +15,7 @@ from . import __version__, compat
 from .config import dump_yaml, validate_project
 from .events import now_iso
 from .fsops import write_if_absent
-from .templates import has_repos, load_skeleton, render_project_files
+from .templates import NOTES_END, NOTES_START, has_repos, load_skeleton, render_project_files
 
 
 def new_project_id() -> str:
@@ -52,9 +52,33 @@ def fixture_config(version: str = __version__) -> dict[str, Any]:
     }
 
 
+def skeleton_folders(config: dict[str, Any]) -> list[dict[str, Any]]:
+    skeleton = load_skeleton()
+    return list(skeleton["folders"]) + [
+        f for f in skeleton.get("optional_folders", []) if f.get("when") != "repos" or has_repos(config)
+    ]
+
+
+def planned_paths(config: dict[str, Any]) -> list[str]:
+    """Every root-relative path ``scaffold`` creates for ``config`` (folders, .keep files, files). Sorted."""
+    paths = {"project.yaml", "_system/state.json"}
+    for entry in skeleton_folders(config):
+        paths.add(entry["path"])
+        if entry.get("keep"):
+            paths.add(entry["path"] + "/.keep")
+    paths.update(render_project_files(config, lambda rel: None))
+    return sorted(paths)
+
+
 def scaffold(target: Path, config: dict[str, Any], *, version: str = __version__,
-             now: str | None = None) -> list[str]:
-    """Create the skeleton under ``target``. Returns the root-relative paths created (empty if nothing)."""
+             now: str | None = None, notes: str | None = None) -> list[str]:
+    """Create the skeleton under ``target``. Returns the root-relative paths created (empty if nothing).
+
+    ``notes`` seeds the project-notes block of a newly created ``AGENTS.md`` (002/R17); an existing file
+    keeps its own block.
+    """
+    if notes is not None and (NOTES_START in notes or NOTES_END in notes):
+        raise ValueError("notes must not contain the project-notes block markers")
     findings = validate_project(config)
     if findings.errors:
         raise ValueError("invalid project configuration: " + "; ".join(f"{p}: {m}" for p, m in findings.errors))
@@ -64,10 +88,7 @@ def scaffold(target: Path, config: dict[str, Any], *, version: str = __version__
     def mark(path: Path) -> None:
         created.append(path.relative_to(target).as_posix())
 
-    skeleton = load_skeleton()
-    folders = list(skeleton["folders"]) + [
-        f for f in skeleton.get("optional_folders", []) if f.get("when") != "repos" or has_repos(config)
-    ]
+    folders = skeleton_folders(config)
     target.mkdir(parents=True, exist_ok=True)
     for entry in folders:
         folder = target / entry["path"]
@@ -84,7 +105,11 @@ def scaffold(target: Path, config: dict[str, Any], *, version: str = __version__
 
     def read_existing(rel: str) -> str | None:
         p = target / rel
-        return p.read_text(encoding="utf-8") if p.is_file() else None
+        if p.is_file():
+            return p.read_text(encoding="utf-8")
+        if rel == "AGENTS.md" and notes is not None:
+            return f"{NOTES_START}\n{notes.strip()}\n{NOTES_END}"
+        return None
 
     for rel, text in render_project_files(config, read_existing).items():
         path = target / rel

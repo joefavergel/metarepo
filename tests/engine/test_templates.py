@@ -146,7 +146,8 @@ def test_scaffold_creates_only_project_files(tmp_path):
     created = scaffold.scaffold(target, scaffold.fixture_config(), now="2026-01-01T00:00:00Z")
     files = sorted(p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file())
     assert files == ["AGENTS.md", "README.md", "_system/state.json", "code/README.md", "outputs/.keep",
-                     "outputs/_templates/.keep", "personal/.keep", "project.yaml", "shared/.keep"]
+                     "outputs/_templates/.keep", "personal/.keep", "project.yaml", "shared/.keep",
+                     "shared/tools/.keep"]
     for folder in ("00_inbox", "10_sources", "20_extracts", "30_wiki", "outputs", "shared", "personal", "_system",
                    "_system/locks", "code"):
         assert (target / folder).is_dir()

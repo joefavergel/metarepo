@@ -298,19 +298,18 @@ def find_artifacts(project_root: Path) -> list[str]:
 
 
 def check_no_artifacts(root: Path) -> list[str]:
-    """Scaffold a fixture project with the engine and verify it holds no toolkit artifacts."""
+    """Create a fixture project with `init` and verify it holds no toolkit artifacts."""
     engine = root / "tooling" / "engine"
-    if not (engine / "metarepo_engine" / "scaffold.py").is_file():
-        return []  # scaffolding arrives with spec 002; the rule is enforced once it exists
+    if not (engine / "metarepo_engine" / "commands" / "init.py").is_file():
+        return []  # `init` arrives with spec 005; the rule is enforced once it exists
     with tempfile.TemporaryDirectory() as tmp:
         target = Path(tmp) / "fixture-project"
-        code = (
-            "import sys; sys.path.insert(0, sys.argv[1]);"
-            "from pathlib import Path;"
-            "from metarepo_engine import scaffold;"
-            "scaffold.scaffold(Path(sys.argv[2]), scaffold.fixture_config());"
-        )
-        proc = subprocess.run([sys.executable, "-c", code, str(engine), str(target)],
+        answers = Path(tmp) / "answers.json"
+        answers.write_text(json.dumps({"name": "Fixture Project", "description": "A neutral fixture project.",
+                                       "notes": "Fixture notes.", "language": "en", "sync_provider": "none",
+                                       "repos": [{"url": "https://example.com/org/app.git"}]}), encoding="utf-8")
+        target.mkdir()
+        proc = subprocess.run([sys.executable, str(engine / "cli.py"), "init", str(target), "--answers", str(answers)],
                               capture_output=True, text=True)
         if proc.returncode != 0 and "PyYAML is required" in proc.stderr:
             return ["no-artifact rule needs PyYAML to scaffold the fixture project: "
