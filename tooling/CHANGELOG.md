@@ -21,3 +21,8 @@ a MINOR bump is treated as a compatibility line change (see `engine/migrations/R
 - 007 intake: `inbox scan`, `unbundle`, `place` (modes: place, `--discard`, `--duplicate-of`, `--reject`,
   `--retriage`, `--proposal`, `--completed`), policy gate, bundle validation (ZIP/TAR, optional 7z/RAR tool,
   folders), provisional extraction in local staging, `intake` and `unbundle` skills. Additive; no `requires` change.
+- 012 lint: `lint [--only ids]` with the 23 checks of spec 012 plus `log-drift`, severity overrides from `WIKI.md`
+  and `project.yaml` (`policy-violation` lowerable only with `allow_policy_downgrade`), read-only apart from the
+  best-effort `state.json -> last_lint`; the `/lint-wiki` skill with `references/checks.md`. `wiki scaffold` now
+  lists the shipped `answer-from-wiki` skill page in `index.md` and the template's example citations sit in code
+  fences, so a fresh scaffold lints clean. Additive; no `requires` change.

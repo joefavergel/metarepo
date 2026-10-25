@@ -9,6 +9,7 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
+from .. import frontmatter
 from ..fsops import atomic_write_text, write_if_absent
 from ..templates import templates_dir
 from . import bundle
@@ -100,11 +101,16 @@ def plan_scaffold(cfg: WikiConfig, project: dict[str, Any], answers: dict[str, A
     title = f"{project.get('name', 'Project')} wiki"
     log = bundle.add_log_entry(bundle.render_log(), day, "Creation",
                                f"Wiki scaffolded (axis: {cfg.axis}, profile: {cfg.profile}).")
+    skill_text = (templates_dir() / "wiki" / "answer-from-wiki.md").read_text(encoding="utf-8")
+    skill = frontmatter.parse(skill_text).front
+    # The shipped skill page is listed from the start so that a fresh scaffold lints clean (012 index-drift).
+    index = bundle.add_index_entry(bundle.render_index(cfg, title), "Skills", str(skill.get("title") or "Skill"),
+                                   ANSWER_SKILL_REL, skill.get("description"))
     plan.files = {
         WIKI_MD: plan.wiki_md,
-        "index.md": bundle.render_index(cfg, title),
+        "index.md": index,
         "log.md": log,
-        ANSWER_SKILL_REL: (templates_dir() / "wiki" / "answer-from-wiki.md").read_text(encoding="utf-8"),
+        ANSWER_SKILL_REL: skill_text,
     }
     plan.folders = cfg.content_folders()
     return plan

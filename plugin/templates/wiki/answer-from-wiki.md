@@ -42,11 +42,15 @@ Report, for each page you rely on:
 
 ## Citation format
 
-> The export runs nightly ([Example concept](area/example-concept.md), verified).
+```
+The export runs nightly ([Example concept](area/example-concept.md), verified).
+```
 
 When you used an extraction, cite the source page and the locator (page, timestamp or sheet):
 
-> The figure appears in ([Example source](sources/example-source.md), page 3).
+```
+The figure appears in ([Example source](sources/example-source.md), page 3).
+```
 
 Quote sparingly. Give the link, then the trust note.
 
