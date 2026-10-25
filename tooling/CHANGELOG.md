@@ -18,3 +18,6 @@ a MINOR bump is treated as a compatibility line change (see `engine/migrations/R
   `templates/sync-providers.yaml`), `not-local` readability check in hashing. `migrate` and `render-templates`
   now take the `config` lease and log `lease acquire|release|takeover` events. Additive; no `requires` change.
 - 013 doctor: `doctor [--local] [--fix-safe --yes <id> --dest <id>=<folder>]` with the 20 checks of spec 013, a gitignore-syntax matcher (`gitignore.py`) for `policy.forbidden_paths`, per-action confirmed fixes, `state.json -> last_doctor`; the `/doctor` skill. Additive; no `requires` change.
+- 007 intake: `inbox scan`, `unbundle`, `place` (modes: place, `--discard`, `--duplicate-of`, `--reject`,
+  `--retriage`, `--proposal`, `--completed`), policy gate, bundle validation (ZIP/TAR, optional 7z/RAR tool,
+  folders), provisional extraction in local staging, `intake` and `unbundle` skills. Additive; no `requires` change.
