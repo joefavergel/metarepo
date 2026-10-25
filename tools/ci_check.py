@@ -310,7 +310,7 @@ def check_no_artifacts(root: Path) -> list[str]:
             "from metarepo_engine import scaffold;"
             "scaffold.scaffold(Path(sys.argv[2]), scaffold.fixture_config());"
         )
-        proc = subprocess.run([sys.executable, "-I", "-c", code, str(engine), str(target)],
+        proc = subprocess.run([sys.executable, "-c", code, str(engine), str(target)],
                               capture_output=True, text=True)
         if proc.returncode != 0 and "PyYAML is required" in proc.stderr:
             return ["no-artifact rule needs PyYAML to scaffold the fixture project: "

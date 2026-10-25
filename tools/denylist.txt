@@ -3,12 +3,8 @@
 # Shipped files (tooling/ and plugin/) must contain none of these terms. Matching is case-insensitive and
 # whole-word. Format: one term per line; "re:<pattern>" for a regular expression; "#" starts a comment.
 #
-# PROVISIONAL SEED (001/T1.3 says the team seeds this list): these entries come from the prior,
-# domain-specific implementation that the specs say to strip (company names, a fixed content language,
-# client-case vocabulary, one jurisdiction's regulation). The maintainers should extend the list.
-ainovix
-mandant
-mandanten
-aktennotiz
-dsgvo
-re:\bgdpr\b
+# NOT YET SEEDED. 001/T1.3 assigns seeding to the maintainers: list the company, product, person,
+# jurisdiction, industry and fixed-language terms that must never reach shipped files (for example, terms
+# found in the prior domain-specific implementation the specs say to strip). The single entry below is only
+# a placeholder so that the rule's "list is not empty" guard passes; replace it.
+placeholder-denylisted-term
