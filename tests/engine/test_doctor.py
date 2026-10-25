@@ -128,10 +128,12 @@ def test_fresh_metarepo_reports_nothing_but_optional_extractor_notes(cli, tmp_pa
     assert skipped == set()  # no repos configured: nothing to skip
 
 
-def test_fresh_metarepo_with_repos_skips_clone_checks_until_006(cli, tmp_path):
+def test_fresh_metarepo_with_repos_reports_missing_clone_as_info(cli, tmp_path):
     root = fresh(cli, tmp_path, WITH_REPO)
     data = run(cli, root, expect=0)
-    assert not [f for f in data["findings"] if f["id"] != "runtime"]
+    others = [f for f in data["findings"] if f["id"] not in ("runtime", "repo-missing")]
+    assert not others
+    assert all(f["severity"] == "info" for f in data["findings"] if f["id"] == "repo-missing")
     for check in ("repo-inside-tree", "repo-missing"):
         st = data["checks"][check]
         assert st["status"] in ("skipped", "ok", "findings")
