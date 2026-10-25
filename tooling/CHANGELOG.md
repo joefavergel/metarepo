@@ -13,3 +13,7 @@ a MINOR bump is treated as a compatibility line change (see `engine/migrations/R
   (atomic file operations, frontmatter, events log, hashing, registry, search).
 - Compatibility: new projects are written with `requires: ">=0.1,<0.2"`.
 - Migrations: none shipped.
+- 004 concurrency: `lease acquire|renew|release|status` (advisory leases with settle-and-verify, owner mode),
+  `leases.require_lease` guard for shared-file writers, conflict-copy detection (`conflicts`,
+  `templates/sync-providers.yaml`), `not-local` readability check in hashing. `migrate` and `render-templates`
+  now take the `config` lease and log `lease acquire|release|takeover` events. Additive; no `requires` change.

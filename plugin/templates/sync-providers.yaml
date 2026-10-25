@@ -1,0 +1,95 @@
+# Sync-provider knowledge used by the engine (004/R10, R13). Rules for adaptation live here, not in code (P3).
+#
+# Conflict copy patterns: Python regular expressions matched against a file NAME (not a path), NFC-normalised.
+# Named groups: stem (name without the conflict marker), ext (optional, with dot), host (optional).
+# `requires` narrows a pattern to keep false positives low:
+#   original    the file `<stem><ext>` must exist in the same folder
+#   known_host  the `host` group must be a host name seen in _system/events.log or this machine
+# Provider "common" applies to every project, whatever `sync.provider` says.
+#
+# `verified` records what was checked against the provider's own documentation (2026-10-25):
+#   documented   the provider's help pages describe this naming
+#   partial      the provider documents that a copy is made but not its exact name; the pattern comes from
+#                third-party reports and must be re-checked when a real conflict is observed
+#   unverified   no official source found
+schema_version: 1
+
+heuristic:
+  # Content heuristic (R10): files in one folder with the same extension and the same normalised stem,
+  # different content, last modified within this many seconds of each other. Reported as "possible".
+  window_seconds: 3600
+  # Regexes removed from the end of a stem to normalise it. The known host suffix is handled in code.
+  strip:
+    - '\s*\(\d+\)$'
+    - '\s*[-_ ]\s*copy(?: \d+)?$'
+    - '\s*\([^()]*(?:copy|conflict)[^()]*\)$'
+    - '\s*\[conflict[^\]]*\]$'
+
+providers:
+  common:
+    verified: partial
+    notes: Names containing "conflicted copy" are produced by several clients.
+    patterns:
+      - id: conflicted-copy
+        regex: '^(?P<stem>.+?)\s*\([^()]*conflicted copy[^()]*\)(?P<ext>\.[^./\\]+)?$'
+        requires: []
+
+  dropbox:
+    verified: partial
+    notes: >
+      Dropbox help says the editor's name, "conflicted copy" and the save date are added to the file name,
+      e.g. "report (<name>'s conflicted copy YYYY-MM-DD).ext". It does not publish the exact template.
+      Case-only name differences get "(Case Conflict)" (third-party reports; the help page was not retrievable).
+    patterns:
+      - id: dropbox-conflicted-copy
+        regex: '^(?P<stem>.+?) \((?P<who>.+?) conflicted copy \d{4}-\d{2}-\d{2}(?: \d+)?\)(?P<ext>\.[^./\\]+)?$'
+        requires: []
+      - id: dropbox-case-conflict
+        regex: '^(?P<stem>.+?) \(Case Conflict(?: \d+)?\)(?P<ext>\.[^./\\]+)?$'
+        requires: []
+
+  onedrive:
+    verified: partial
+    notes: >
+      University IT guidance reports "<stem>-<ComputerName>.ext" for the copy made on the device that lost the
+      conflict, and "<stem> (1).ext" style duplicates. Microsoft's own page for this was not retrievable.
+    patterns:
+      - id: onedrive-host-suffix
+        regex: '^(?P<stem>.+)-(?P<host>[^-\s.]+)(?P<ext>\.[^./\\]+)?$'
+        requires: [original, known_host]
+      - id: onedrive-numbered-duplicate
+        regex: '^(?P<stem>.+?) \((?P<n>\d+)\)(?P<ext>\.[^./\\]+)?$'
+        requires: [original]
+
+  google-drive:
+    verified: unverified
+    notes: >
+      Google's help pages say Drive for desktop keeps both versions when streaming/mirroring content differs
+      but do not state the file naming. Third-party reports mention a numbered suffix "(n)" and a
+      "[Conflict]" marker; both are kept as patterns until observed.
+    patterns:
+      - id: gdrive-conflict-marker
+        regex: '^(?P<stem>.+?) \[Conflict(?: \d+)?\](?P<ext>\.[^./\\]+)?$'
+        requires: []
+      - id: gdrive-numbered-duplicate
+        regex: '^(?P<stem>.+?) \((?P<n>\d+)\)(?P<ext>\.[^./\\]+)?$'
+        requires: [original]
+
+# Per-folder availability recommended to members (004/R13). `mode` values: offline (keep a local copy) or
+# on-demand (online-only is acceptable; downloaded when explicitly requested).
+availability:
+  - {path: "30_wiki/", mode: offline}
+  - {path: "20_extracts/", mode: offline}
+  - {path: "_system/", mode: offline}
+  - {path: "(root files)", mode: offline}
+  - {path: "10_sources/", mode: on-demand}
+  - {path: "shared/", mode: on-demand}
+
+availability_howto:
+  verified: partial
+  google-drive: >
+    Drive for desktop: for a shared drive (streaming only), right-click the folder in the file manager and
+    choose Offline access, then Available offline. For My Drive you may instead choose Mirror files in
+    Settings > Preferences > Folders from Drive. Menu names differ per OS and version; re-check on your machine.
+  onedrive: Right-click the folder and choose Always keep on this device (Windows) / Always Keep on This Device (macOS).
+  dropbox: Right-click the folder and choose Make available offline (Dropbox online-only files feature).

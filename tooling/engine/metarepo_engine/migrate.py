@@ -7,7 +7,7 @@ returning the root-relative POSIX paths it changes (or would change).
 
 Flow: plan the chain, show a dry run, require confirmation, back up every file to be changed into the
 member's local cache, apply, bump ``toolkit.requires``, record the migration in ``_system/state.json``.
-The ``config`` lease (004) is not available yet: ``LEASE_HOOK`` is the seam 004 fills.
+The ``config`` lease (004) is taken through ``LEASE_HOOK`` (default: ``leases.config_lease_hook``).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from . import compat
+from . import compat, leases
 from .events import now_iso
 from .fsops import atomic_write_bytes, atomic_write_text, local_cache_dir
 from .jsonout import EXIT_COMPAT, EngineError
@@ -27,7 +27,8 @@ from .root import Project
 
 _FILE_RE = re.compile(r"^(\d+(?:\.\d+)?)_to_(\d+(?:\.\d+)?)\.py$")
 
-# 004 replaces this with a function that acquires the ``config`` lease and returns a release callable.
+# Acquires the ``config`` lease and returns a release callable (004/R1). ``None`` selects the default,
+# ``leases.config_lease_hook``; tests may substitute a fake. Handles expose ``.lease`` for re-verification.
 LEASE_HOOK: Callable[[Project], Callable[[], None]] | None = None
 
 
@@ -158,7 +159,7 @@ def run_migrations(
     if dry_run or not confirmed:
         return report
 
-    release = LEASE_HOOK(project) if LEASE_HOOK else None
+    release = (LEASE_HOOK or leases.config_lease_hook)(project)
     try:
         pid = project.project_id
         if not pid:
@@ -176,8 +177,14 @@ def run_migrations(
                 if not dst.exists():
                     shutil.copy2(src, dst)
 
+        def reverify() -> None:  # 004/R4, R8: before every batch of writes
+            held = getattr(release, "lease", None)
+            if held is not None:
+                leases.require_lease(root, "config", held, env=getattr(release, "env", None))
+
         changed: set[str] = set()
         for step in steps:
+            reverify()
             fn = _load(step.path)
             to_change = sorted(fn(root, True))
             for rel in to_change:
@@ -190,6 +197,7 @@ def run_migrations(
                                   EXIT_COMPAT)
             changed.update(done)
 
+        reverify()
         backup("project.yaml")
         backup("_system/state.json")
         atomic_write_text(project.config_path, bump_requires_text(project.config_path.read_text(encoding="utf-8"),
