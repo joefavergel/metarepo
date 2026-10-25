@@ -312,6 +312,9 @@ def check_no_artifacts(root: Path) -> list[str]:
         )
         proc = subprocess.run([sys.executable, "-I", "-c", code, str(engine), str(target)],
                               capture_output=True, text=True)
+        if proc.returncode != 0 and "PyYAML is required" in proc.stderr:
+            return ["no-artifact rule needs PyYAML to scaffold the fixture project: "
+                    "run `python -m pip install -r requirements-dev.txt` (this rule is never skipped silently)"]
         if proc.returncode != 0:
             return ["no-artifact rule: could not scaffold a fixture project: " + (proc.stderr.strip() or proc.stdout.strip())]
         return [f"no-artifact rule: toolkit artifact in project: {p}" for p in find_artifacts(target)]

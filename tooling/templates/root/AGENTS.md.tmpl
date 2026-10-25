@@ -1,0 +1,122 @@
+# Agent instructions: ${project_name}
+
+<!-- Generated from the toolkit's template and project.yaml. Everything outside the project-notes block is
+rewritten on regeneration; put project-specific additions inside that block (section 11). -->
+
+## 1. What this is
+
+This folder is a **knowledge metarepository**: the single point of access to everything the project
+"${project_name}" knows. It holds the project's sources, their Markdown extractions, a synthesized wiki,
+generated outputs and shared material. It is **not a git repository** and it contains **no toolkit code**.
+Code repositories are referenced, never stored here.
+
+**Objective.** ${objective}
+
+This file is the single instruction file for agents of every harness. You can read and consult the project
+by following it even when no toolkit is installed.
+
+## 2. Folder map and access tiers
+
+Numbered folders are stages of the information lifecycle, plain names are human work areas, and folders
+starting with `_` are managed by the engine.
+
+${folder_map}
+
+Tiers: **free** = always the entry point; **on demand** = open when the question needs it, search first;
+**explicit request only** = never open unless the operator asks for it.
+
+## 3. How to answer questions (escalation ladder)
+
+Escalate only as far as the question requires:
+
+1. `30_wiki/index.md`, then the pages it links to (follow links);
+2. footnotes on those pages (`[^id]`);
+3. the wiki source pages they point to;
+4. the extraction in `20_extracts/`: **search before reading** with the engine (`search <query> --scope extracts`)
+   and read only the relevant sections;
+5. the original in `10_sources/`: only when the operator explicitly asks.
+
+Do not load binaries to answer a question. If the wiki does not know, say so instead of guessing, and never
+present an untraceable claim as fact.
+
+## 4. Write rules
+
+- **Engine-only areas.** `10_sources/` (placement), `20_extracts/` (extraction) and `_system/` (state, leases,
+  event log) are written only by engine commands, never by hand or by direct file edits.
+- **Wiki.** `30_wiki/` is written only by the wiki workflows (`/init-wiki`, `/feed-wiki`), under a lease, after the
+  operator approves the changes.
+- **Sources are immutable.** Never modify or delete anything in `10_sources/`. A correction is a new source that
+  supersedes the old one.
+- **Deletions** happen only through the engine (`remove <path> --confirm <sha256>`) after explicit confirmation
+  in the session; they are logged in `_system/events.log`. Recovery relies on the sync provider's trash.
+- **Folders.** Never rename or move top-level folders. Do not add `CLAUDE.md`, `.claude/CLAUDE.md` or
+  `CLAUDE.local.md` here: this project uses `AGENTS.md` as its only instruction file.
+- **Approvals.** Triage decisions, wiki writes and governance sign-offs need an explicit human decision in the
+  session. When running unattended, take the conservative path (write nothing shared, move nothing) and say
+  what you skipped.
+- Work in `personal/<member>/` only in the operator's own folder unless asked otherwise.
+
+## 5. Workflows
+
+These workflows need the metarepo toolkit installed in your harness (the Claude plugin, or the portable bundle
+installed once per machine). This project accepts toolkit versions in the range `${toolkit_requires}`; commands
+that write refuse to run outside it. Each workflow is a skill named after its command, found in your harness's
+skills directory.
+
+| Command | Purpose |
+|---|---|
+| `/create-metarepo` | Scaffold a new metarepository from an interview. |
+| `/join-metarepo` | Onboard a member: sync settings, local clones outside this folder, toolkit check. |
+| `/intake` | Process `00_inbox/`: de-duplicate, unpack, triage, place sources, write extractions, then hand wiki items to `/feed-wiki`. |
+| `/init-wiki` | One-time setup of the wiki (objective, page types, governance). |
+| `/feed-wiki` | Fold approved sources into the wiki from their extractions. The only wiki writer. |
+| `/consult-wiki` | Answer questions from the wiki, read-only. |
+| `/lint-wiki` | Check knowledge integrity: provenance, links, staleness, policy. |
+| `/make-output` | Produce deliverables from the wiki into `outputs/`, with citations. |
+| `/doctor` | Check environment, sync and toolkit-compatibility health. |
+
+## 6. Running the engine
+
+The engine (`cli.py`) does everything deterministic: hashing, identifiers, placement, registry, search, linting,
+leases, scaffolding. Locate it in this order: the `METAREPO_ENGINE` environment variable (path to `cli.py` or an
+executable); the engine installed next to the skills; a `metarepo` executable on `PATH`. If none exists, stop and
+tell the operator how to install the toolkit.
+
+- macOS / Linux: `python3 <path to cli.py> <command> --json`
+- Windows (PowerShell or Command Prompt): `py -3 <path to cli.py> <command> --json`
+
+Run it from inside this folder, or pass `--root <path to this folder>`. Use `--dry-run` on any command that
+changes something to preview it. Python 3.10 or newer and PyYAML are required; the toolkit never installs
+software on its own.
+
+## 7. Code repositories
+
+${repos_section}
+
+## 8. Language rules
+
+- Converse with the operator in the language of their first message in the session, and follow switches.
+- Content you write (extractions, wiki pages, outputs) uses the project's content language: `${content_language}`.
+- Code, paths, frontmatter keys, identifiers and event-log labels are always English.
+
+## 9. Sync etiquette
+
+This folder is synced${sync_line}. Assume eventual consistency and several people editing at once.
+
+- Do not rename or move folders, and never create a git repository inside this tree.
+- Shared files that many people write are written only by the engine, under a lease.
+- Cloud-native placeholders (for example `.gdoc` or `.gsheet` files) are shortcuts, not content: ask for an
+  exported copy.
+- Conflict copies (names such as "conflicted copy" or "(1)") are never merged silently: report them.
+- Run `/doctor` when something looks wrong.
+
+## 10. Project scope
+
+- **In scope:** ${scope_in}
+- **Out of scope:** ${scope_out}
+
+## 11. Project notes
+
+<!-- project-notes:start -->
+${project_notes}
+<!-- project-notes:end -->

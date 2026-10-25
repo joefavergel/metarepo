@@ -1,0 +1,23 @@
+{
+  "description": "Folders created by scaffolding (002 section 2). keep=true also writes an empty .keep file so providers that skip empty folders still sync them; it is never set inside 10_sources, 20_extracts or the inbox, where every file is meaningful to the engine.",
+  "folders": [
+    { "path": "00_inbox", "keep": false },
+    { "path": "10_sources", "keep": false },
+    { "path": "20_extracts", "keep": false },
+    { "path": "30_wiki", "keep": false },
+    { "path": "outputs", "keep": true },
+    { "path": "outputs/_templates", "keep": true },
+    { "path": "shared", "keep": true },
+    { "path": "personal", "keep": true },
+    { "path": "_system", "keep": false },
+    { "path": "_system/locks", "keep": false }
+  ],
+  "optional_folders": [
+    { "path": "code", "when": "repos", "keep": false }
+  ],
+  "root_files": [
+    { "path": "AGENTS.md", "template": "root/AGENTS.md.tmpl", "always": true },
+    { "path": "README.md", "template": "root/README.md.tmpl", "always": true },
+    { "path": "code/README.md", "template": "root/code-README.md.tmpl", "when": "repos" }
+  ]
+}

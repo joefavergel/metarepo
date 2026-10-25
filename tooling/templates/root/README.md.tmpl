@@ -1,0 +1,45 @@
+# ${project_name}
+
+${description}
+
+**Objective.** ${objective}
+
+This folder is the project's **knowledge metarepository**: one shared place for everything the project
+knows. It is kept by LLM agents and curated by people. Agents start from `AGENTS.md`; you start here.
+
+## What is where
+
+${folder_map}
+
+Numbered folders are stages of the information lifecycle (`00_inbox`, then `10_sources`, `20_extracts`,
+`30_wiki`). Plain names are for people. Folders starting with `_` belong to the engine.
+
+## How to contribute
+
+1. **Drop new material** (documents, spreadsheets, recordings, archives, whole folders) into `00_inbox/`.
+   No structure is needed. Nothing else.
+2. Ask your agent to run **`/intake`**. It checks for duplicates, proposes what to do with each item, and
+   asks you to approve before anything is filed.
+3. To ask a question, use **`/consult-wiki`**. Answers come from the wiki, with citations.
+4. Put anything the team shares that is not a source (templates, reference kits, team tools) in `shared/`.
+   Use `personal/<your-id>/` for your own scratch work.
+
+## What not to touch
+
+- Do **not** edit, rename, move or delete anything in `10_sources/`, `20_extracts/` or `_system/`: the engine
+  owns them. Corrections are new sources, added through the inbox.
+- Do **not** rename or move top-level folders, and do **not** create a git repository in this folder.
+- Do **not** put secrets, passwords, keys or dependency folders here (`/doctor` reports them).
+- Code lives in git, **outside** this folder. See `code/README.md` if the project has repositories.
+
+## Joining
+
+Each member installs the metarepo toolkit once (the Claude plugin, or the portable bundle for other agent
+tools) and runs **`/join-metarepo`** in this folder. This project accepts toolkit versions in the range
+`${toolkit_requires}`.
+
+## Notes
+
+<!-- project-notes:start -->
+${project_notes}
+<!-- project-notes:end -->
