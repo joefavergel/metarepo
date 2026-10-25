@@ -158,3 +158,14 @@ def record(project_id: str, root: Path, name: str, path: Path) -> Path:
     data["metarepo_root"] = str(root)
     data.setdefault("repos", {})[name] = str(path)
     return userconfig.save(project_id, data)
+
+
+def local_clone_paths(root: Path, effective_config: dict[str, Any]) -> dict[str, Path | None]:
+    """Repo name -> this member's recorded clone path (None when not recorded). Read-only; used by ``doctor`` (013)."""
+    pid = effective_config.get("id")
+    try:
+        recorded = (userconfig.load(str(pid)).get("repos") or {}) if pid else {}
+    except ValueError:
+        recorded = {}
+    return {r["name"]: (Path(recorded[r["name"]]) if recorded.get(r["name"]) else None)
+            for r in declared(effective_config)}

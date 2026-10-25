@@ -225,3 +225,10 @@ def test_sync_detection_from_shared_file():
     a = syncinfo.availability("google-drive")
     assert {"path": "30_wiki/", "mode": "offline"} in a["folders"] and a["howto"]
     assert syncinfo.availability(None)["howto"] is None
+
+
+def test_local_clone_paths_hook_for_doctor(proj):
+    cfg = {"id": PID, "repos": [{"name": "app", "url": "u"}, {"name": "lib", "url": "v"}]}
+    assert repos.local_clone_paths(proj, cfg) == {"app": None, "lib": None}
+    userconfig.save(PID, {"repos": {"app": "/x/app"}})
+    assert repos.local_clone_paths(proj, cfg) == {"app": Path("/x/app"), "lib": None}
