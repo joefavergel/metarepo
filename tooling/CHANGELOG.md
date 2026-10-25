@@ -17,3 +17,6 @@ a MINOR bump is treated as a compatibility line change (see `engine/migrations/R
   `leases.require_lease` guard for shared-file writers, conflict-copy detection (`conflicts`,
   `templates/sync-providers.yaml`), `not-local` readability check in hashing. `migrate` and `render-templates`
   now take the `config` lease and log `lease acquire|release|takeover` events. Additive; no `requires` change.
+- 007 intake: `inbox scan`, `unbundle`, `place` (modes: place, `--discard`, `--duplicate-of`, `--reject`,
+  `--retriage`, `--proposal`, `--completed`), policy gate, bundle validation (ZIP/TAR, optional 7z/RAR tool,
+  folders), provisional extraction in local staging, `intake` and `unbundle` skills. Additive; no `requires` change.

@@ -72,7 +72,10 @@ def test_cli_py_has_no_logic(repo):
 
 
 def test_envelope_is_single_json_object(cli, make_project):
+    stubs = [c for c in COMMANDS if not c.implemented]
+    if not stubs:
+        pytest.skip("every command is implemented")
     root = make_project()
-    code, out, err = cli("place", "--json", "--root", str(root))
+    code, out, err = cli(*stubs[0].name.split(" "), "--json", "--root", str(root))
     assert code == 2 and isinstance(out, dict)
     assert "not implemented" in err
