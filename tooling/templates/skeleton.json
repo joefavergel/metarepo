@@ -8,6 +8,7 @@
     { "path": "outputs", "keep": true },
     { "path": "outputs/_templates", "keep": true },
     { "path": "shared", "keep": true },
+    { "path": "shared/tools", "keep": true },
     { "path": "personal", "keep": true },
     { "path": "_system", "keep": false },
     { "path": "_system/locks", "keep": false }
