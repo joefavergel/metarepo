@@ -1,0 +1,65 @@
+{
+  "ok": true,
+  "command": "status",
+  "version": "<version>",
+  "data": {
+    "in_metarepo": true,
+    "root": "<root>",
+    "toolkit": {
+      "version": "<version>",
+      "engine": "<engine>",
+      "python": "<python>",
+      "python_ok": true,
+      "platform": "<platform>"
+    },
+    "dependencies": {
+      "pyyaml": {
+        "available": true,
+        "version": "<pyyaml>",
+        "install": null
+      },
+      "extractors": {
+        "markitdown": {
+          "available": "<detected>",
+          "install": "python3 -m pip install markitdown"
+        },
+        "docling": {
+          "available": "<detected>",
+          "install": "python3 -m pip install docling"
+        },
+        "pymupdf": {
+          "available": "<detected>",
+          "install": "python3 -m pip install pymupdf"
+        },
+        "pymupdf4llm": {
+          "available": "<detected>",
+          "install": "python3 -m pip install pymupdf4llm"
+        }
+      }
+    },
+    "project": {
+      "id": "7f3c1b2a-5d4e-4f6a-9b8c-0123456789ab",
+      "name": "Example Project",
+      "slug": "example-project"
+    },
+    "compatibility": {
+      "requires": ">=0.1,<0.2",
+      "installed": "<version>",
+      "status": "ok",
+      "message": "toolkit version is within the project's range"
+    },
+    "gates": {
+      "metarepo_configured": true,
+      "wiki_configured": false
+    },
+    "leases": {
+      "count": 1,
+      "files": [
+        "wiki.lease.json"
+      ],
+      "note": "lease contents are interpreted from spec 004 on"
+    }
+  },
+  "warnings": [],
+  "errors": []
+}

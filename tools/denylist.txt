@@ -1,0 +1,10 @@
+# Domain-agnosticism denylist (P1, 001/R12). Dev-only: this file is not shipped.
+#
+# Shipped files (tooling/ and plugin/) must contain none of these terms. Matching is case-insensitive and
+# whole-word. Format: one term per line; "re:<pattern>" for a regular expression; "#" starts a comment.
+#
+# NOT YET SEEDED. 001/T1.3 assigns seeding to the maintainers: list the company, product, person,
+# jurisdiction, industry and fixed-language terms that must never reach shipped files (for example, terms
+# found in the prior domain-specific implementation the specs say to strip). The single entry below is only
+# a placeholder so that the rule's "list is not empty" guard passes; replace it.
+placeholder-denylisted-term

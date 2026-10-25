@@ -1,0 +1,5 @@
+{
+  "name": "metarepo",
+  "version": "0.1.0",
+  "description": "Knowledge metarepository workflows: create, join, intake, wiki, outputs and health checks, built on the bundled engine."
+}

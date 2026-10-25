@@ -1,0 +1,36 @@
+{
+  "$comment": "002 section 5: _system/state.json schema v1. Written only by the engine (002/R15).",
+  "type": "object",
+  "required": ["schema_version", "metarepo", "wiki", "toolkit"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "metarepo": {
+      "type": "object",
+      "required": ["configured"],
+      "properties": {
+        "configured": { "type": "boolean" },
+        "created_at": { "type": ["string", "null"] },
+        "created_with": { "type": ["string", "null"] }
+      }
+    },
+    "wiki": {
+      "type": "object",
+      "required": ["configured"],
+      "properties": {
+        "configured": { "type": "boolean" },
+        "configured_at": { "type": ["string", "null"] },
+        "bundle": { "type": "string" }
+      }
+    },
+    "toolkit": {
+      "type": "object",
+      "properties": {
+        "created_with": { "type": ["string", "null"] },
+        "last_written_with": { "type": ["string", "null"] },
+        "migrations": { "type": "array" }
+      }
+    },
+    "last_doctor": { "type": ["object", "string", "null"] },
+    "last_lint": { "type": ["object", "string", "null"] }
+  }
+}

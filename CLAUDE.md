@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Pre-alpha, specification phase. **No code exists yet.** The repository holds `README.md` (the public design) and `.specs/` (Spec-Driven Development drafts, git-ignored via `.gitignore` → `.specs/*`). Everything under "Planned layout" and "Commands" below comes from the specs; verify a path exists before relying on it. If `.specs/` is absent (it is not in other clones), treat `README.md` as the design reference and ask the owner for the specs rather than inferring requirements.
+Pre-alpha. Specs 001 (repository and distribution), 002 (metarepo contract) and 003 (core engine) are implemented: the layout, build/package/CI tooling, the engine CLI with a command registry, schemas, templates, naming and ids, atomic file operations, frontmatter, registry and search. Commands owned by later specs (004–014) are registered stubs that answer `not_implemented` (exit 2) until their spec lands. The repository also holds `README.md` (the public design) and `.specs/` (Spec-Driven Development drafts, git-ignored via `.gitignore` → `.specs/*`). Everything in the specs describes intent; verify a path exists before relying on it. If `.specs/` is absent (it is not in other clones), treat `README.md` as the design reference and ask the owner for the specs rather than inferring requirements.
 
 ## Working from the specs
 
@@ -16,7 +16,7 @@ Pre-alpha, specification phase. **No code exists yet.** The repository holds `RE
 - `[TBD]` = open decision: frame it and list candidates, never invent the answer. `[TO VERIFY]` = external fact (e.g. Claude plugin/hook manifest format) to check before relying on it.
 - `.specs/` is local-only. To make a decision part of the shared record, promote its ADR to a tracked path (e.g. repo-root `decisions/`).
 
-## Planned layout (001)
+## Layout (001)
 
 ```
 tooling/            canonical, harness-agnostic toolkit: the only place to edit engine/skills/templates
@@ -34,16 +34,32 @@ tests/              engine and structure tests (tests/engine/ uses a fixture-met
 
 Never edit `plugin/skills|engine|templates` directly; edit `tooling/` and rebuild. CI fails if the copies differ.
 
-## Commands (planned)
+## Commands
 
 ```bash
-python3 tools/build.py      # copy tooling/ into plugin/, stamp plugin.json version from tooling/VERSION
-python3 tools/package.py    # deterministic dist/metarepo-plugin-<v>.zip and dist/metarepo-toolkit-<v>.zip
-python3 tools/ci_check.py   # stdlib-only structure checks (manifests, SKILL.md frontmatter, command set,
-                            # plugin == tooling hashes, version sync, denylist, no-artifact rule)
+python3 -m pip install -r requirements-dev.txt   # dev setup: PyYAML (runtime dependency) + pytest (dev only)
+
+python3 tools/build.py          # copy tooling/ into plugin/, stamp plugin.json version; run after ANY change under tooling/
+python3 tools/build.py --check  # exit 1 if plugin/ differs from what a build would produce
+python3 tools/package.py        # deterministic dist/metarepo-plugin-<v>.zip and dist/metarepo-toolkit-<v>.zip
+python3 tools/ci_check.py       # stdlib-only structure checks (manifests, SKILL.md frontmatter, command set,
+                                # plugin == tooling, version sync, templates, denylist, no-artifact rule);
+                                # the no-artifact rule runs the engine, so use the interpreter that has PyYAML
+
+python3 -m pytest                                           # full suite (pytest.ini: testpaths = tests)
+python3 -m pytest tests/engine/test_compat.py               # one file
+python3 -m pytest tests/engine/test_compat.py::test_lines_and_requires_for   # one test
+python3 -m pytest -k "search and cjk"                       # by keyword
+UPDATE_GOLDEN=1 python3 -m pytest -k golden                 # regenerate golden JSON files (then review the diff:
+                                                            # an envelope change is a MAJOR version change)
+python3 tooling/engine/cli.py status --json                 # run the engine directly
 ```
 
-The test runner is not yet chosen in the specs; when it is, record how to run the suite and a single test here. Every spec's last task is "tests and `tools/ci_check.py` pass". CI matrix: ubuntu, macos, windows × Python 3.10 and latest.
+Test runner: **pytest** (dev-only; the engine's only runtime dependency stays PyYAML). Tests live in `tests/engine/` (engine and CLI contract; fixtures in `tests/helpers.py`, golden files in `tests/golden/`) and `tests/tools/` (build, package, `ci_check`). Every spec's last task is "tests and `tools/ci_check.py` pass". CI (`.github/workflows/ci.yml`): ubuntu, macos, windows × Python 3.10 and latest; it runs `build.py --check`, `ci_check.py` and pytest. The code targets Python 3.10: no `tomllib`, `datetime.UTC`, `StrEnum`, `Self`, `Path.walk`, `itertools.batched`, and no `fromisoformat` of a `Z` suffix (a test enforces the list).
+
+**`plugin/skills|engine|templates` and `plugin/VERSION` are committed build output** (provisional decision for 001/T0.3: `marketplace.json` points at `./plugin`, so a git install only works with the copies present). CI fails when they drift; after editing `tooling/` run `python3 tools/build.py` and commit the result. `plugin/hooks/` and `plugin/.claude-plugin/plugin.json` (except the stamped version) are hand-written.
+
+**Adding or implementing an engine command** (the registry pattern): `cli.py` and `dispatch.py` never change. Each command is one module in `tooling/engine/metarepo_engine/commands/` exposing `COMMAND`, listed by one line in `commands/__init__.py::MODULES`. Every command in the 003 table already exists as a stub: replace the stub module's `COMMAND` with the real one, no registry edit needed. Rules and the module template: `tooling/engine/CONTRIBUTING-commands.md`.
 
 ## Architecture (big picture)
 

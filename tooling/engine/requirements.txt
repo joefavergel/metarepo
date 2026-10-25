@@ -1,0 +1,2 @@
+# Runtime dependency of the engine (001/ADR-002). Optional extractors are detected, never installed.
+PyYAML>=6.0
