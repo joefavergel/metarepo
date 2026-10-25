@@ -1,0 +1,55 @@
+# Wiki rulebook: ${project_name}
+
+This file is the editorial rulebook of the project wiki. It belongs to the project team: edit it freely.
+The wiki writer (`/feed-wiki`) and the readers (`/consult-wiki`) follow what is written here.
+Project-level settings (scope, language, policy, governance mode) live in `project.yaml`; on overlap
+`project.yaml` wins.
+
+## Configuration
+
+Machine-read; keep it valid YAML. Page types are free names; `Source` and `Skill` are structural and always
+present, so they are not listed. A folder defaults to the kebab-cased name and can be set per entry
+(`{name: ..., folder: ...}`).
+
+${config_block}
+
+## What this wiki is for
+
+${purpose}
+
+Content language: `${content_language}`.
+
+## Layout
+
+${layout}
+
+## Page types
+
+${page_types}
+
+## What earns a page
+
+${threshold}
+
+## Ingest emphasis
+
+${ingest_emphasis}
+
+## Governance
+
+${governance}
+
+## Conventions
+
+- Every page is Markdown with YAML frontmatter; `type` is required. Recommended keys: `title`, `description`
+  (reused verbatim in `index.md`), `tags`, `status` (`draft`, `stable`, `deprecated`), `stale_after`.
+- Links between pages are relative Markdown links. File names are kebab-case.
+- Provenance: every weight-bearing claim carries a footnote keyed to a `sources[].id` of the page; the id
+  resolves to a page in `sources/`, then to the extraction and the original. A claim that cannot be traced is
+  marked as such. Nothing is invented: not a citation, not a figure, not a sign-off.
+- A page that is superseded is marked `status: deprecated`; it is not deleted.
+- `index.md` lists every page; `log.md` records changes, newest first.
+
+## Open questions
+
+${open_questions}
