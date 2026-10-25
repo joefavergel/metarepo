@@ -37,9 +37,20 @@ Report, for each page you rely on:
 - **Status:** `draft` and `deprecated` pages are weaker evidence; prefer `stable` pages and mention the
   replacement when a page is deprecated.
 - **Freshness:** a page is stale when `stale_after` has passed. Say so.
+- **Contradictions:** if pages or a recorded open question disagree, report both sides, attributed; do not
+  pick one.
 
 ## Citation format
 
 > The export runs nightly ([Example concept](area/example-concept.md), verified).
 
+When you used an extraction, cite the source page and the locator (page, timestamp or sheet):
+
+> The figure appears in ([Example source](sources/example-source.md), page 3).
+
 Quote sparingly. Give the link, then the trust note.
+
+## When the wiki does not know
+
+Say "not covered", name the closest pages, and suggest adding a source to the inbox. Do not assemble an answer
+from adjacent pages.
