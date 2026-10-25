@@ -273,7 +273,7 @@ CASES = {
 
 
 # a page the engine cannot read as OKF is also unindexed, unlogged and unlinked: that is the fixture, not noise
-COLLATERAL: dict[str, set[str]] = {"conformance": {"index-drift", "log-drift", "orphan"}}
+COLLATERAL: dict[str, set[str]] = {"conformance": {"index-drift", "orphan"}}
 
 
 def test_every_catalog_check_has_a_fixture():
@@ -317,6 +317,12 @@ def test_index_wrong_group_and_missing_index(cli, clean):
     index.unlink()
     _, env = lint_run(cli, root)
     assert any("missing" in f["detail"] for f in found(env, "index-drift", "30_wiki/index.md"))
+
+
+def test_pages_are_not_required_to_be_listed_in_the_log(cli, clean):
+    (clean["root"] / "30_wiki/log.md").write_text(bundle.render_log(), encoding="utf-8")
+    _, env = lint_run(cli, clean["root"])
+    assert found(env, "log-drift") == []
 
 
 def test_log_entry_pointing_nowhere(cli, clean):
@@ -520,6 +526,7 @@ def test_output_stale_detects_changed_page_and_accepts_fresh_hash(cli, clean):
     digest = hashlib.sha256((root / TOPIC).read_bytes()).hexdigest()
     add_page(root, "outputs/2026-10-24-brief-topic.md", {"type": "Output", "kind": "brief",
              "based_on": [{"path": TOPIC, "sha256": digest}]}, "# Brief\n")
+    (root / "outputs/2026-10-24-faq-topic.html").write_text("<p>faq</p>", encoding="utf-8")
     (root / "outputs/2026-10-24-faq-topic.meta.yaml").write_text(
         yaml.safe_dump({"type": "Output", "based_on": [{"path": TOPIC, "sha256": digest}]}), encoding="utf-8")
     _, env = lint_run(cli, root)
@@ -527,7 +534,7 @@ def test_output_stale_detects_changed_page_and_accepts_fresh_hash(cli, clean):
     append(root, TOPIC, "\nEdited later.\n")
     _, env = lint_run(cli, root)
     assert {f["where"] for f in found(env, "output-stale")} == {"outputs/2026-10-24-brief-topic.md",
-                                                                 "outputs/2026-10-24-faq-topic.meta.yaml"}
+                                                                 "outputs/2026-10-24-faq-topic.html"}
     (root / TOPIC).unlink()
     _, env = lint_run(cli, root)
     assert all("no longer exists" in f["detail"] for f in found(env, "output-stale"))
@@ -570,3 +577,68 @@ def test_performance_on_a_large_fixture(cli, make_project, tmp_path):
     started = time.perf_counter()
     lint_run(cli, root)
     assert time.perf_counter() - started < 10
+
+
+# ---- drift follows the provenance chain (010/R15 file-back pages cite wiki pages)
+def _filed_back(c, name, cites):
+    add_page(c["root"], f"30_wiki/alpha/{name}.md", {
+        "type": "Concept", "title": name, "description": name, "sources": [
+            {"id": f"page-{i}", "title": t, "path": f"{t}.md"} for i, t in enumerate(cites)],
+        "verified": {"by": "human:member-b", "at": "2026-10-24T16:00:00Z"}}, f"# {name}\n\nSee [topic](topic.md).\n")
+
+
+def test_file_back_page_citing_a_grounded_page_is_not_drift(cli, clean):
+    _filed_back(clean, "answer", ["topic"])
+    _filed_back(clean, "second-hop", ["answer"])
+    _, env = lint_run(cli, clean["root"])
+    assert found(env, "drift") == []
+
+
+def test_chain_that_ends_without_a_source_is_drift_and_cycles_terminate(cli, clean):
+    add_page(clean["root"], "30_wiki/alpha/ungrounded.md", {
+        "type": "Concept", "title": "u", "description": "u", "sources": [{"id": "x", "title": "x", "path": "cycle.md"}],
+        "verified": {"by": "human:member-b", "at": "2026-10-24T16:00:00Z"}}, "# u\n\nSee [c](cycle.md).\n")
+    add_page(clean["root"], "30_wiki/alpha/cycle.md", {
+        "type": "Concept", "title": "c", "description": "c", "sources": [{"id": "y", "title": "y", "path": "ungrounded.md"}],
+        "verified": {"by": "human:member-b", "at": "2026-10-24T16:00:00Z"}}, "# c\n\nSee [u](ungrounded.md).\n")
+    _, env = lint_run(cli, clean["root"])
+    assert {f["where"] for f in found(env, "drift")} == {"30_wiki/alpha/ungrounded.md", "30_wiki/alpha/cycle.md"}
+
+
+# ---- source-unregistered vs. real intake output (archived containers, 002/R4) and Unicode names (P10)
+def test_archived_bundle_flow_leaves_no_unregistered_sources(cli, root, tmp_path):
+    import test_intake as ti
+
+    z = ti.zipped(root / "00_inbox" / "pack.zip", {"one.txt": "one text", "two.txt": "two text"})
+    ti.inbox(root, "solo.txt", ti.DOC)
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    nonce = ti.acquire(cli, root)
+    code, env, _ = ti.run(cli, root, "unbundle", "00_inbox/pack.zip", "--staging", str(staging), "--provisional")
+    m = env["data"]
+    for r in m["members"]:
+        assert ti.place(cli, root, nonce, r["staged"], "--category", "packs", "--bundle-slug", "pack",
+                        "--member-path", r["member_path"], "--group", "pack", "--parent", m["container"]["id"])[0] == 0
+    members = staging / "members.json"
+    members.write_text(json.dumps([{"id": r["id"], "member_path": r["member_path"], "decision": "wiki"}
+                                   for r in m["members"]]))
+    assert ti.place(cli, root, nonce, "00_inbox/pack.zip", "--container", "--members", str(members),
+                    decision="reference")[0] == 0
+    assert ti.place(cli, root, nonce, "00_inbox/solo.txt", "--category", "misc")[0] == 0
+    assert (root / "10_sources/_bundles/pack.zip").is_file()
+    code, env = lint_run(cli, root)
+    assert code == 0
+    assert not [f for f in env["data"]["findings"] if f["severity"] in ("block", "error", "warn")], env["data"]["findings"]
+
+
+def test_decomposed_unicode_source_name_is_not_unregistered(cli, root):
+    import unicodedata
+
+    name = unicodedata.normalize("NFD", "caf\u00e9.txt")
+    src = add_source(root, name, b"coffee", triage="reference")
+    registered = root / src["extract"]
+    doc = frontmatter.read(registered)
+    doc.front["source_path"] = unicodedata.normalize("NFC", doc.front["source_path"])
+    frontmatter.write(registered, doc)
+    _, env = lint_run(cli, root)
+    assert found(env, "source-unregistered") == []

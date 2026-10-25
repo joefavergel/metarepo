@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,7 +34,7 @@ SEVERITIES = ("block", "error", "warn", "info")
 _RANK = {s: i for i, s in enumerate(SEVERITIES)}
 
 # id -> default severity (012 section 2). ``log-drift`` is the one addition: 010 leaves ``index.md`` and
-# ``log.md`` edits to the skill, so lint must be able to see when the log disagrees with the bundle.
+# ``log.md`` edits to the skill, so lint must be able to see when the log is malformed or links nowhere.
 CATALOG: dict[str, str] = {
     "conformance": "error",
     "policy-violation": "block",
@@ -72,6 +73,7 @@ _PART_NAME = re.compile(r"\.part-\d{3}\.md$")
 
 FIX_FEED = "/feed-wiki (the only wiki writer)"
 FIX_RETRIAGE = "/intake --retriage"
+SIDECAR = ".meta.yaml"  # 014/R7: provenance of an output without frontmatter
 FIX_OUTPUT = "regenerate the output with /make-output"
 
 
@@ -147,6 +149,7 @@ class Linter:
         self._extracts: list[_Extract] = []
         self._pages: list[OkfPage] = []
         self._rel: dict[int, str] = {}
+        self._by_rel: dict[str, OkfPage] = {}
 
     # ---- setup
     def _warn(self, code: str, message: str) -> None:
@@ -258,6 +261,7 @@ class Linter:
             page = OkfPage.load(path)
             self._pages.append(page)
             self._rel[id(page)] = path.relative_to(self.root).as_posix()
+            self._by_rel[self._rel[id(page)]] = page
         self.report.pages = len(self._pages)
 
     # ---- source and extraction checks
@@ -309,13 +313,13 @@ class Linter:
         base = self.root / SOURCES_DIR
         if not base.is_dir():
             return
-        known = {str(ex.row["path"]) for ex in self._extracts}
+        known = {unicodedata.normalize("NFC", str(ex.row["path"])) for ex in self._extracts}
         for path in sorted(p for p in base.rglob("*") if p.is_file()):
             name = path.name
             if name.startswith(".") or name in _JUNK_NAMES or name.startswith("~$"):
                 continue
             rel = path.relative_to(self.root).as_posix()
-            if rel not in known:
+            if unicodedata.normalize("NFC", rel) not in known:
                 self.add("source-unregistered", rel, "no extraction records this source",
                          "/intake (or `extract` on the file) to create its extraction")
 
@@ -395,8 +399,8 @@ class Linter:
             if not structural:
                 if not page.sources:
                     self.add("no-sources", rel, "empty sources[]", FIX_FEED)
-                elif not any(s in source_ids for s in page.source_ids()):
-                    self.add("drift", rel, "no sources[] id resolves to a source page in 30_wiki/sources/", FIX_FEED)
+                elif not self._bottoms_out(rel, source_ids):
+                    self.add("drift", rel, "its sources[] never lead to a source page in 30_wiki/sources/", FIX_FEED)
             for fid in page.dangling_footnotes():
                 self.add("dangling-footnote", rel, f"[^{fid}] has no matching sources[].id", FIX_FEED)
             if page.type != sourcepage.SOURCE_TYPE:  # a source page's own entry is never cited
@@ -437,6 +441,32 @@ class Linter:
             if not (inbound.get(rel, set()) - {rel}):
                 self.add("orphan", rel, "no page links here", f"{FIX_FEED}: link it from a related page")
 
+    def _bottoms_out(self, rel: str, source_ids: set[str]) -> bool:
+        """True when a ``sources[]`` entry of the page is a source page (by id), or points (by ``path``) to another
+        wiki page that itself bottoms out: a file-back page cites the pages it synthesized (010/R15)."""
+        by_rel = self._by_rel
+        seen: set[str] = set()
+        stack = [rel]
+        while stack:
+            current = stack.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            page = by_rel.get(current)
+            if page is None or page.parse_error:
+                continue
+            if page.type == sourcepage.SOURCE_TYPE:
+                return True
+            if any(sid in source_ids for sid in page.source_ids()):
+                return True
+            for entry in page.sources:
+                path = entry.get("path")
+                if isinstance(path, str) and path and not _EXTERNAL.match(path):
+                    nxt = _resolve(current, _link_target(path))
+                    if nxt in by_rel:
+                        stack.append(nxt)
+        return False
+
     def _note_link(self, rel: str, target: str, inbound: dict[str, set[str]]) -> None:
         resolved = _resolve(rel, target)
         if resolved is None or not self.exists(resolved):
@@ -456,7 +486,7 @@ class Linter:
             self.add("index-drift", f"{WIKI}/index.md", "index.md is missing", FIX_FEED)
         log_path = self.root / WIKI / "log.md"
         if log_path.is_file():
-            self._check_log(log_path, rel_wiki)
+            self._check_log(log_path)
 
     def _check_index(self, path: Path, rel_wiki: dict[str, OkfPage]) -> None:
         where = f"{WIKI}/index.md"
@@ -494,7 +524,7 @@ class Linter:
             if key not in listed:
                 self.add("index-drift", f"{WIKI}/{key}", "page is not listed in index.md", FIX_FEED)
 
-    def _check_log(self, path: Path, rel_wiki: dict[str, OkfPage]) -> None:
+    def _check_log(self, path: Path) -> None:
         where = f"{WIKI}/log.md"
         text = path.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
         dates = [m.group(1) for m in _DATE_HEADING.finditer(text)]
@@ -505,20 +535,12 @@ class Linter:
             self.add("log-drift", where, "a date appears under more than one heading", FIX_FEED)
         elif valid != sorted(valid, reverse=True):
             self.add("log-drift", where, "date headings are not ordered newest first", FIX_FEED)
-        mentioned: set[str] = set()
         for m in re.finditer(r"\]\(\s*<?([^)\s>]+)", text):
             if _EXTERNAL.match(m.group(1)):
                 continue
             resolved = _resolve(where, _link_target(m.group(1)))
-            if resolved is None:
-                continue
-            if not self.exists(resolved):
+            if resolved is not None and not self.exists(resolved):
                 self.add("log-drift", where, f"entry links to missing file {m.group(1)}", FIX_FEED)
-            elif resolved.startswith(WIKI + "/"):
-                mentioned.add(resolved[len(WIKI) + 1:])
-        for key, page in rel_wiki.items():
-            if key not in mentioned and page.type != wiki_config.SKILL_TYPE:
-                self.add("log-drift", f"{WIKI}/{key}", "page is not mentioned in log.md", FIX_FEED)
 
     # ---- outputs (contract of 014/R7: frontmatter or ``.meta.yaml`` sidecar with ``based_on: [{path, sha256}]``)
     def check_outputs(self) -> None:
@@ -527,14 +549,19 @@ class Linter:
             return
         for path in sorted(p for p in base.rglob("*") if p.is_file()):
             rel = path.relative_to(self.root).as_posix()
-            if rel.startswith(f"{OUTPUTS_DIR}/_templates/"):
-                continue
+            if path.relative_to(base).parts[0].startswith("_"):
+                continue  # ``_templates/`` and other reserved folders
             meta: Any = None
+            where = rel
             try:
-                if path.name.endswith(".meta.yaml"):
-                    meta = yaml_module().safe_load(path.read_text(encoding="utf-8"))
-                elif path.suffix == ".md":
+                if path.suffix.lower() in (".md", ".markdown"):
                     meta = frontmatter.read_head(path)
+                elif path.name.endswith(SIDECAR):
+                    meta = yaml_module().safe_load(path.read_text(encoding="utf-8"))
+                    stem = path.name[: -len(SIDECAR)]
+                    owners = [p for p in path.parent.glob(stem + ".*") if p.is_file() and not p.name.endswith(SIDECAR)]
+                    if len(owners) == 1:
+                        where = owners[0].relative_to(self.root).as_posix()
             except Exception:  # noqa: BLE001 - a malformed output record is not a lint failure
                 continue
             if not isinstance(meta, dict) or meta.get("type") != "Output" or not isinstance(meta.get("based_on"), list):
@@ -546,9 +573,9 @@ class Linter:
                 resolved = _resolve("x", target)
                 full = self.root / resolved if resolved else None
                 if full is None or not full.is_file():
-                    self.add("output-stale", rel, f"based_on page {target} no longer exists", FIX_OUTPUT)
+                    self.add("output-stale", where, f"based_on page {target} no longer exists", FIX_OUTPUT)
                 elif item.get("sha256") and sha256_file(full) != str(item["sha256"]):
-                    self.add("output-stale", rel, f"based_on page {target} changed after the output was generated",
+                    self.add("output-stale", where, f"based_on page {target} changed after the output was generated",
                              FIX_OUTPUT)
 
 
