@@ -14,7 +14,7 @@ from typing import Any, Sequence
 from . import __version__, compat
 from .command import Command, Context
 from .config import INSTALL_HINT
-from .events import append_event, resolve_actor
+from .events import append_event, configured_actor, resolve_actor
 from .jsonout import (
     EXIT_COMPAT,
     EXIT_DEPENDENCY,
@@ -121,6 +121,15 @@ def _fail(command: str, code: str, message: str, exit_code: int, json_mode: bool
     return exit_code
 
 
+def _project_id(project: Project | None) -> str | None:
+    if project is None:
+        return None
+    try:
+        return project.project_id
+    except Exception:  # noqa: BLE001 - an unreadable project.yaml must not stop the actor lookup
+        return None
+
+
 def run_command(cmd: Command, args: argparse.Namespace) -> int:
     json_mode = bool(getattr(args, "json", False))
     if not cmd.implemented:
@@ -159,7 +168,7 @@ def run_command(cmd: Command, args: argparse.Namespace) -> int:
         project=project,
         json_mode=json_mode,
         dry_run=bool(getattr(args, "dry_run", False)),
-        actor=getattr(args, "actor", None),
+        actor=configured_actor(getattr(args, "actor", None), _project_id(project)),
         version=__version__,
         warnings=ctx_warnings,
     )

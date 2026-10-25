@@ -495,7 +495,7 @@ def config_lease_hook(project: Any) -> LeaseHandle:
     """``migrate.LEASE_HOOK`` implementation: take the ``config`` lease; calling the result releases it."""
     from .events import resolve_actor
 
-    return acquire_handle(project.root, "config", resolve_actor(None), "migrate")
+    return acquire_handle(project.root, "config", resolve_actor(None, project.project_id), "migrate")
 
 
 def acquire_handle(root: Path, area: str, actor: str, operation: str, **kwargs: Any) -> LeaseHandle:

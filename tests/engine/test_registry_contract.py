@@ -18,10 +18,12 @@ SPEC_COMMANDS = {
     "lease status", "doctor", "remove", "repos list", "repos path", "repos clone", "repos status", "migrate",
     "install-skills", "output register",
 }
+# Commands added by later specs beyond the 003 table (each needs a row in the table): 006 `config user`.
+EXTRA_COMMANDS = {"config user"}
 
 
 def test_registry_has_every_spec_command_exactly_once():
-    assert set(IDS) == SPEC_COMMANDS
+    assert set(IDS) == SPEC_COMMANDS | EXTRA_COMMANDS
     assert len(IDS) == len(set(IDS))
     assert len(MODULES) == len(set(MODULES)) and list(MODULES) == sorted(MODULES)
 

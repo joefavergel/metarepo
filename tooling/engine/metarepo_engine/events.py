@@ -22,13 +22,23 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def resolve_actor(explicit: str | None) -> str:
-    """--actor, then METAREPO_ACTOR, then the OS user name (per-user config arrives with 006)."""
+def configured_actor(explicit: str | None, project_id: str | None = None) -> str | None:
+    """--actor, then METAREPO_ACTOR, then ``actor`` in the per-user config (006/R5); None when none is set."""
     if explicit:
         return explicit
     env = os.environ.get("METAREPO_ACTOR")
     if env:
         return env
+    from .userconfig import stored_actor
+
+    return stored_actor(project_id)
+
+
+def resolve_actor(explicit: str | None, project_id: str | None = None) -> str:
+    """--actor, METAREPO_ACTOR, the per-user config, then the OS user name."""
+    found = configured_actor(explicit, project_id)
+    if found:
+        return found
     try:
         return getpass.getuser()
     except Exception:  # noqa: BLE001 - getpass can fail in odd sandboxes
