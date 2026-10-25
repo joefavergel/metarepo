@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Pre-alpha. Specs 001 (repository and distribution), 002 (metarepo contract) and 003 (core engine) are implemented: the layout, build/package/CI tooling, the engine CLI with a command registry, schemas, templates, naming and ids, atomic file operations, frontmatter, registry and search. Commands owned by later specs (004–014) are registered stubs that answer `not_implemented` (exit 2) until their spec lands. The repository also holds `README.md` (the public design) and `.specs/` (Spec-Driven Development drafts, git-ignored via `.gitignore` → `.specs/*`). Everything in the specs describes intent; verify a path exists before relying on it. If `.specs/` is absent (it is not in other clones), treat `README.md` as the design reference and ask the owner for the specs rather than inferring requirements.
+Pre-alpha. Specs 001–014 are implemented (engine, all 33 CLI commands, 11+ portable skills, plugin build, CI tooling). Skill-level behaviour (agent judgment steps) is covered by text/structure tests plus engine tests; manual harness runs, Python 3.10, Linux/Windows CI and real optional extractors are not yet verified. The repository also holds `README.md` (the public design) and `.specs/` (Spec-Driven Development drafts, git-ignored via `.gitignore` → `.specs/*`). Everything in the specs describes intent; verify a path exists before relying on it. If `.specs/` is absent (it is not in other clones), treat `README.md` as the design reference and ask the owner for the specs rather than inferring requirements.
 
 ## Working from the specs
 
