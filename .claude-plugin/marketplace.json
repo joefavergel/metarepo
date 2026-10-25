@@ -1,0 +1,14 @@
+{
+  "name": "metarepo",
+  "description": "Harness-agnostic toolkit for running a team's project knowledge as a knowledge metarepository.",
+  "owner": {
+    "name": "metarepo maintainers"
+  },
+  "plugins": [
+    {
+      "name": "metarepo",
+      "source": "./plugin",
+      "description": "Commands, hooks and the bundled engine for knowledge metarepositories."
+    }
+  ]
+}
