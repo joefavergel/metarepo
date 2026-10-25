@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-import build
 import ci_check
 
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", ".DS_Store")

@@ -1,5 +1,4 @@
 """Registry-wide contract (003/AC1): every command has --help, --json, and --dry-run when mutating."""
-import json
 import subprocess
 import sys
 

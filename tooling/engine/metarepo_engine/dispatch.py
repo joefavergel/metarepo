@@ -174,7 +174,10 @@ def run_command(cmd: Command, args: argparse.Namespace) -> int:
     result.warnings = ctx.warnings + result.warnings
     exit_code = result.derive_exit_code()
 
-    if cmd.writes_project and project is not None and not ctx.dry_run and result.log_event:
+    # Log what was done: successful runs, and failed runs that already touched something.
+    # A run that stopped before changing anything (no targets) leaves no event.
+    if (cmd.writes_project and project is not None and not ctx.dry_run and result.log_event
+            and (exit_code == EXIT_OK or result.targets)):
         try:
             append_event(
                 project.root,
@@ -182,6 +185,7 @@ def run_command(cmd: Command, args: argparse.Namespace) -> int:
                 targets=result.targets,
                 result="ok" if exit_code == EXIT_OK else "error",
                 actor=resolve_actor(ctx.actor),
+                extra=result.event_extra or None,
             )
         except OSError as exc:
             result.warn("event_log_failed", f"could not append to _system/events.log: {exc}")

@@ -54,6 +54,7 @@ class Result:
     targets: list[str] = field(default_factory=list)  # root-relative POSIX paths touched (event log)
     text: str | None = None  # optional human-readable rendering
     log_event: bool = True  # False: a writes_project command that changed nothing skips the event log
+    event_extra: dict[str, Any] = field(default_factory=dict)  # extra keys merged into the event record
 
     def warn(self, code: str, message: str, path: str | None = None) -> None:
         self.warnings.append(warning(code, message, path))

@@ -3,12 +3,11 @@ import json
 import subprocess
 import sys
 
-import pytest
 
 from metarepo_engine import dispatch
 from metarepo_engine.command import Command
 from metarepo_engine.events import read_events
-from metarepo_engine.jsonout import EXIT_PRECONDITION, EngineError, Result
+from metarepo_engine.jsonout import EngineError, Result
 
 
 def _read_cmd(name="probe read", **kw):

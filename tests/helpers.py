@@ -45,5 +45,42 @@ def make_project(root: Path, *, requires: str = ">=0.1,<0.2", yaml_text: str | N
     return root
 
 
+def add_source(root: Path, rel: str, content: bytes, *, title: str | None = None, triage: str = "wiki",
+               quality: str = "high", body: str | None = None, media_type: str = "text/plain",
+               original_name: str | None = None, extra_front: dict[str, Any] | None = None) -> dict[str, str]:
+    """Place a source and write its extraction record (the layout of 008 section 2)."""
+    import hashlib
+
+    digest = hashlib.sha256(content).hexdigest()
+    sid = f"src-{digest[:12]}"
+    src = root / "10_sources" / rel
+    src.parent.mkdir(parents=True, exist_ok=True)
+    src.write_bytes(content)
+    front: dict[str, Any] = {
+        "type": "Extract", "schema_version": 1, "source_id": sid, "source_path": f"10_sources/{rel}",
+        "source_sha256": digest, "source_size": len(content), "media_type": media_type,
+        "original_name": original_name or Path(rel).name, "title": title or Path(rel).stem,
+        "language": "en", "extracted_at": "2026-10-24T15:00:00Z",
+        "extractor": {"name": "plain", "version": "1", "mode": "local"}, "quality": quality,
+        "triage": {"decision": triage, "reason": "test", "by": "member-a"},
+        "supersedes": [], "bundle": {"parent_id": None, "group": None, "member_path": None},
+    }
+    front.update(extra_front or {})
+    text = "---\n" + yaml.safe_dump(front, sort_keys=False, allow_unicode=True) + "---\n"
+    text += body if body is not None else f"# {front['title']}\n\nExtracted text of {rel}.\n"
+    md = root / "20_extracts" / f"{rel}.md"
+    md.parent.mkdir(parents=True, exist_ok=True)
+    md.write_text(text, encoding="utf-8")
+    return {"id": sid, "sha256": digest, "path": f"10_sources/{rel}", "extract": f"20_extracts/{rel}.md"}
+
+
+def add_page(root: Path, rel: str, front: dict[str, Any] | None, body: str) -> Path:
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    head = "---\n" + yaml.safe_dump(front, sort_keys=False, allow_unicode=True) + "---\n" if front is not None else ""
+    path.write_text(head + body, encoding="utf-8")
+    return path
+
+
 def tree_snapshot(root: Path) -> dict[str, bytes]:
     return {p.relative_to(root).as_posix(): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()}

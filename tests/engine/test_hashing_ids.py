@@ -1,6 +1,5 @@
 """002/R12 source ids (002/AC3), 003/R10 hashing and its cache, forbidden-path defaults (002 section 6)."""
 import hashlib
-import json
 
 import pytest
 

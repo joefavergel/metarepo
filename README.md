@@ -138,6 +138,16 @@ metarepo/                       ← this repository
 
 Work is specified before it is built. Read `.specs/README.md`, then implement specs in dependency order; each spec has `spec.md` (what and why), `plan.md` (how), `tasks.md` (ordered, verifiable steps) and, where needed, `decisions/` (ADRs).
 
+Set up and check a clone:
+
+```bash
+python3 -m pip install -r requirements-dev.txt   # PyYAML + pytest
+python3 tools/build.py                           # refresh plugin/ from tooling/
+python3 tools/ci_check.py && python3 -m pytest
+```
+
+Edit only `tooling/`; `plugin/skills`, `plugin/engine` and `plugin/templates` are build output. To add an engine command see `tooling/engine/CONTRIBUTING-commands.md`.
+
 ## Prior art and acknowledgements
 
 - Andrej Karpathy — *LLM Wiki* (raw sources → LLM-maintained wiki → schema; ingest / query / lint).

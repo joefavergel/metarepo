@@ -22,7 +22,7 @@ from typing import Any, Callable
 from . import compat
 from .events import now_iso
 from .fsops import atomic_write_bytes, atomic_write_text, local_cache_dir
-from .jsonout import EXIT_COMPAT, EXIT_PRECONDITION, EngineError
+from .jsonout import EXIT_COMPAT, EngineError
 from .root import Project
 
 _FILE_RE = re.compile(r"^(\d+(?:\.\d+)?)_to_(\d+(?:\.\d+)?)\.py$")

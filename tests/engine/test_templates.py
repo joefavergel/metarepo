@@ -1,7 +1,7 @@
 """002/R17, R18, R2a, R2b: rendering and scaffolding (002/AC2, AC5)."""
 import copy
 import re
-from pathlib import Path
+
 
 import pytest
 

@@ -1,0 +1,62 @@
+{
+  "ok": true,
+  "command": "registry",
+  "version": "<version>",
+  "data": {
+    "count": 3,
+    "sources": [
+      {
+        "id": "src-561910d04683",
+        "path": "10_sources/papers/alpha.pdf",
+        "sha256": "561910d04683886f53ccd37a58e2b928094308822c0029470fe8bcc76cfa98c0",
+        "size": 11,
+        "media_type": "application/pdf",
+        "original_name": "alpha.pdf",
+        "title": "Alpha Paper",
+        "language": "en",
+        "quality": "high",
+        "triage": "wiki",
+        "parent_id": null,
+        "extractor": "plain",
+        "extracted_at": "2026-10-24T15:00:00Z",
+        "extract": "20_extracts/papers/alpha.pdf.md"
+      },
+      {
+        "id": "src-8d15483c5450",
+        "path": "10_sources/data/gamma.csv",
+        "sha256": "8d15483c545086f42b42ac237e84b5c9e3643ec9ed342adc1a3f3c0ef57a6581",
+        "size": 11,
+        "media_type": "text/plain",
+        "original_name": "gamma.csv",
+        "title": "Gamma",
+        "language": "en",
+        "quality": "failed",
+        "triage": "defer",
+        "parent_id": "src-abcdefabcdef",
+        "extractor": "plain",
+        "extracted_at": "2026-10-24T15:00:00Z",
+        "extract": "20_extracts/data/gamma.csv.md"
+      },
+      {
+        "id": "src-b5369b79c79a",
+        "path": "10_sources/papers/beta.md",
+        "sha256": "b5369b79c79ac3c12745ea3d1589c0f976de6f9daea25c2ab9746f5c20614edd",
+        "size": 10,
+        "media_type": "text/markdown",
+        "original_name": "beta.md",
+        "title": "Beta Notes",
+        "language": "en",
+        "quality": "partial",
+        "triage": "reference",
+        "parent_id": null,
+        "extractor": "plain",
+        "extracted_at": "2026-10-24T15:00:00Z",
+        "extract": "20_extracts/papers/beta.md.md"
+      }
+    ],
+    "duplicates": [],
+    "format": "json"
+  },
+  "warnings": [],
+  "errors": []
+}
