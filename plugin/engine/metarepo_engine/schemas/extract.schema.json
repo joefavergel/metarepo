@@ -1,0 +1,51 @@
+{
+  "$comment": "008 section 2: extraction frontmatter schema v1. Keywords: see metarepo_engine/validate.py. Timestamps are ISO-8601 strings (validate after extract.schema_check.coerce).",
+  "type": "object",
+  "required": ["type", "schema_version", "source_id", "source_path", "source_sha256"],
+  "properties": {
+    "type": { "type": "string", "const": "Extract" },
+    "schema_version": { "type": "integer", "enum": [1] },
+    "source_id": { "type": "string", "pattern": "^src-[0-9a-f]{12,64}$" },
+    "source_path": { "type": "string", "pattern": "^10_sources/.+" },
+    "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "source_size": { "type": ["integer", "null"], "minimum": 0 },
+    "media_type": { "type": ["string", "null"] },
+    "original_name": { "type": ["string", "null"] },
+    "aliases": { "type": "array", "items": { "type": "string" } },
+    "title": { "type": ["string", "null"] },
+    "language": { "type": ["string", "null"] },
+    "extracted_at": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$" },
+    "extractor": {
+      "type": ["object", "null"],
+      "required": ["name", "mode"],
+      "properties": {
+        "name": { "type": "string", "pattern": "\\S" },
+        "version": { "type": ["string", "null"] },
+        "mode": { "type": "string", "enum": ["local", "cloud", "agent"] }
+      }
+    },
+    "quality": { "type": ["string", "null"], "enum": ["high", "partial", "needs-review", "failed", null] },
+    "quality_notes": { "type": ["string", "null"] },
+    "structure": { "type": ["object", "null"] },
+    "parts": { "type": "integer", "minimum": 2 },
+    "triage": {
+      "type": ["object", "null"],
+      "properties": {
+        "decision": { "type": ["string", "null"], "enum": ["wiki", "reference", "defer", "reject", null] },
+        "reason": { "type": ["string", "null"] },
+        "by": { "type": ["string", "null"] },
+        "at": { "type": ["string", "null"] },
+        "confidence": { "type": ["string", "null"] }
+      }
+    },
+    "supersedes": { "type": "array", "items": { "type": "string", "pattern": "^src-[0-9a-f]{12,64}$" } },
+    "bundle": {
+      "type": ["object", "null"],
+      "properties": {
+        "parent_id": { "type": ["string", "null"] },
+        "group": { "type": ["string", "null"] },
+        "member_path": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
